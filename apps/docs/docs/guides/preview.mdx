@@ -1,0 +1,106 @@
+---
+title: Preview
+description: Show slides in the page with Preview, SlidePreview and useSlides, and what the HTML preview can't show.
+---
+
+Browsers can't display `.pptx` files, so the library draws the slides itself. The preview reads the same resolved model the writer hands to PptxGenJS, with every frame already computed, and renders each slide as absolutely positioned HTML with SVG for shapes and charts. PptxGenJS isn't loaded for it.
+
+## Preview
+
+`<Preview>` mounts the deck, draws every slide and redraws after a change:
+
+```vue
+<Preview :document="ReportDeck" :document-props="{ rows, quarter }" notes />
+```
+
+| prop             | default                  |                                                    |
+| ---------------- | ------------------------ | -------------------------------------------------- |
+| `document`       | required                 | The presentation component. Read once, on mount.   |
+| `document-props` | `undefined`              | Its props. A change redraws the slides.            |
+| `slide`          | `undefined`              | Show only this slide, zero-based.                  |
+| `notes`          | `false`                  | Show each slide's speaker notes under it.          |
+| `debounce`       | `50`                     | Milliseconds between the last change and a redraw. |
+| `label`          | `'Presentation preview'` | Accessible name of the wrapping `<section>`.       |
+
+| slot      | props                     |                                                                                |
+| --------- | ------------------------- | ------------------------------------------------------------------------------ |
+| `loading` |                           | Shown until the first model is ready.                                          |
+| `error`   | `{ error }`               | Shown when resolving fails. The default shows the message with `role="alert"`. |
+| `caption` | `{ index, total, model }` | Replaces the `1 / 3` caption under each slide.                                 |
+
+The markup has no styles of its own beyond the slide boxes. Style it through its data attributes:
+
+| element                                 |                                                               |
+| --------------------------------------- | ------------------------------------------------------------- |
+| `section[data-pptx-preview]`            | The wrapper. `data-loading` and `aria-busy` while it updates. |
+| `figure[data-pptx-preview-slide]`       | One per slide.                                                |
+| `div[data-pptx-slide]`                  | The slide itself, see below.                                  |
+| `figcaption[data-pptx-preview-caption]` | The caption.                                                  |
+| `p[data-pptx-preview-notes]`            | The notes, with `notes`.                                      |
+| `p[data-pptx-preview-error]`            | The default error message.                                    |
+
+```css
+[data-pptx-preview] {
+  display: grid;
+  gap: 16px;
+}
+
+[data-pptx-slide] {
+  border: 1px solid #e5e5e5;
+}
+```
+
+## SlidePreview
+
+`<SlidePreview>` draws one slide of a model you already have, from `useSlides()` or `renderToModel()`:
+
+```vue
+<script setup lang="ts">
+import { SlidePreview, useSlides } from 'vue-pptx-document'
+
+import HelloDeck from './HelloDeck.vue'
+
+const { model } = useSlides(HelloDeck, () => ({ name: 'Ada' }))
+</script>
+
+<template>
+  <div style="max-width: 360px">
+    <SlidePreview v-if="model" :model="model" :index="0" />
+  </div>
+</template>
+```
+
+| prop    |                                         |
+| ------- | --------------------------------------- |
+| `model` | Required. A `DeckModel`.                |
+| `index` | Required. The slide, zero-based.        |
+| `label` | Accessible name. Defaults to `Slide N`. |
+
+It renders `div[data-pptx-slide]` with `role="group"` and `aria-roledescription="slide"`, so its text stays readable to screen readers, as wide as its container and as tall as the slide's aspect ratio. Lengths inside are container query units, so the slide scales with its width: set the width on a parent and the content follows. A hidden slide gets `data-hidden`.
+
+## useSlides
+
+`useSlides(presentation, props?, options?)` is what `<Preview>` runs. It resolves the deck to its model and keeps it current, without writing a file:
+
+```ts
+const { model, loading, error, update, instance } = useSlides(HelloDeck, props, { debounce: 50 })
+```
+
+Use it for thumbnails, a slide picker or a viewer of your own. `instance()` returns the mounted presentation, so `instance()?.toBlob()` writes a file from the same tree without mounting it again. See the [reference](/reference/composables#useslides).
+
+## Limits
+
+The preview is close to PowerPoint, not identical. What differs:
+
+- **Fonts.** Text uses the browser's fonts, with Arial as the fallback. A font the browser doesn't have renders in a different one, and line breaks can differ from PowerPoint's.
+- **Autofit.** `fit="shrink"` and `fit="resize"` are PowerPoint features applied when the file opens; the preview draws text at its set size.
+- **Effects.** Shadows are drawn; `glow` and `outline` on text aren't.
+- **Shapes.** Common preset shapes (rectangles, rounded and snipped rectangles, ellipses, triangles, polygons, arrows, chevrons, stars, callouts and others) are drawn as SVG. A shape the preview doesn't know is drawn as its bounding box with a dashed outline.
+- **Theme colors.** `accent1` and the other theme slots use the Office default theme's colors, which is what PptxGenJS writes.
+- **Charts.** Every chart type and combo charts are drawn, with axes, gridlines, legends and data labels in PowerPoint's default style. Less common options are ignored in the preview but still written to the file.
+- **Images.** EMF and WMF pictures, which an imported deck may contain, don't display in browsers.
+- **Media.** Video and audio files play in a `<video>` or `<audio>` element; an `online` video shows a link.
+- **Placeholders.** An empty placeholder on a master isn't drawn, since its prompt text only shows in PowerPoint's editor.
+- **Slide numbers** show the slide's position in the preview.
+
+When a detail matters, download the file and open it.

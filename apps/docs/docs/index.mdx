@@ -1,0 +1,36 @@
+---
+title: Introduction
+description: Write PowerPoint decks as Vue 3 components, written to .pptx by PptxGenJS.
+---
+
+vue-pptx-document turns Vue components into PowerPoint files. You write `<Presentation>`, `<Slide>`, `<Text>`, `<Shape>`, `<Chart>` and `<Table>` in a template, with props, `v-for`, `v-if` and computed values, and get a real `.pptx` with editable text, native charts and tables, in the browser or in Node.
+
+The current version is {{version}}. See the [changelog](/changelog) for what each release changed.
+
+<Component path="MinimalExample" />
+
+## How it works
+
+1. Vue mounts your component with a custom renderer (`createRenderer`). Its nodes are plain objects: a `PRESENTATION` with `SLIDE`s, each holding `TEXT`, `SHAPE`, `CHART` and so on.
+2. Reactive changes patch that tree like they would patch the DOM, and tell the library the tree changed.
+3. On render, a copy of the tree is resolved into a model: every object gets its final frame in inches and its options in PptxGenJS's shape. Objects inside a `<View>` or a `<Slide layout="flex">` are placed by [Yoga](https://www.yogalayout.dev) flexbox first.
+4. The model goes to [PptxGenJS](https://gitbrent.github.io/PptxGenJS/) 4, which writes the file. The same model drives `<Preview>`, which draws the slides as HTML and SVG without loading PptxGenJS at all.
+
+Props you don't see in this reference go to PptxGenJS unchanged, so its docs on [text](https://gitbrent.github.io/PptxGenJS/docs/api-text/), [shapes](https://gitbrent.github.io/PptxGenJS/docs/api-shapes/), [charts](https://gitbrent.github.io/PptxGenJS/docs/api-charts/) and [tables](https://gitbrent.github.io/PptxGenJS/docs/api-tables/) apply as written.
+
+The package also reads `.pptx` files: `vue-pptx-document/import` parses a deck and writes a Vue component that renders the same slides. See [Import and codegen](/guides/import).
+
+<CardGroup cols={2}>
+  <Card title="Getting started" href="/getting-started" icon="rocket">
+    Install the package, write a deck and download it.
+  </Card>
+  <Card title="Examples" href="/examples" icon="play">
+    A live preview, absolute and flex layout, every chart type, masters and tables.
+  </Card>
+  <Card title="Layout" href="/guides/layout" icon="layout-grid">
+    Inches, units, percentages and flexbox.
+  </Card>
+  <Card title="Reference" href="/reference/components" icon="book-open">
+    Every component, composable and function.
+  </Card>
+</CardGroup>

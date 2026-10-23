@@ -1,0 +1,96 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+      # Vitest's V8 coverage needs Node; `bun run` hands the tool binaries to it.
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - run: bun install --frozen-lockfile
+      - name: Code samples in the README and docs are in sync
+        run: node scripts/samples.js --check
+      - name: Format
+        run: bun run format:check
+      - name: Lint
+        run: bun run lint
+      - name: Typecheck
+        run: bun run typecheck
+      - name: Test with coverage
+        run: bun run test:coverage
+      - name: Upload coverage to Codecov
+        if: ${{ !cancelled() }}
+        uses: codecov/codecov-action@v7
+        with:
+          files: packages/vue-pptx-document/coverage/lcov.info
+          token: ${{ secrets.CODECOV_TOKEN }}
+          fail_ci_if_error: false
+      - name: Build (library, size-limit budgets, demo)
+        run: bun run build
+      - name: Check the package (publint, type resolution)
+        run: bun run lint:package
+      - name: Install the packed tarball and render from it
+        run: bun run test:pack
+      - name: End-to-end tests of the demo app
+        run: |
+          bunx playwright install --with-deps chromium firefox webkit
+          bun run --filter example test:e2e
+      - name: Upload Playwright traces
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-traces
+          path: apps/example/test-results/
+          retention-days: 7
+      - name: Build docs
+        run: bun run build:docs
+
+  # The library declares vue ^3.5.0, so it's tested against the oldest version in that
+  # range and against the newest one on npm, not only the version in bun.lock.
+  vue-versions:
+    name: Vue ${{ matrix.vue }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        vue: ['3.5.0', 'latest']
+    steps:
+      - uses: actions/checkout@v7
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - name: Install with vue@${{ matrix.vue }}
+        run: |
+          npm pkg set overrides.vue=${{ matrix.vue }}
+          bun install
+      - name: Check the installed version
+        working-directory: packages/vue-pptx-document
+        env:
+          EXPECTED: ${{ matrix.vue }}
+        run: |
+          actual=$(node -p "require('vue/package.json').version")
+          echo "vue $actual"
+          if [ "$EXPECTED" != latest ] && [ "$actual" != "$EXPECTED" ]; then exit 1; fi
+      - name: Typecheck the library
+        run: bun run --filter vue-pptx-document typecheck
+      - name: Unit tests
+        run: bun run test

@@ -1,0 +1,51 @@
+name: Bug report
+description: A slide renders wrong, the preview differs from PowerPoint, something throws, or doesn't match the docs.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. If the same slide comes out wrong when built with PptxGenJS directly, the bug is in PptxGenJS; please report it [upstream](https://github.com/gitbrent/PptxGenJS/issues) as well and link it here.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you expected, and what you got instead. Include the error message if there is one.
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Reproduction
+      description: The smallest presentation component that shows the problem, or a link to a StackBlitz or repository.
+      render: vue
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: vue-pptx-document version
+      placeholder: 1.0.0
+    validations:
+      required: true
+  - type: dropdown
+    id: environment
+    attributes:
+      label: Where does it render
+      multiple: true
+      options:
+        - Preview component
+        - PowerPoint
+        - Keynote
+        - Google Slides / LibreOffice
+        - Browser (Chrome / Edge)
+        - Browser (Firefox)
+        - Browser (Safari)
+        - Node
+        - Nuxt or another SSR framework
+        - Web Worker
+  - type: input
+    id: vue
+    attributes:
+      label: Vue and bundler versions
+      placeholder: vue 3.5.x, vite 8.x

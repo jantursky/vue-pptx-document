@@ -1,0 +1,68 @@
+---
+title: Troubleshooting
+description: Common errors and warnings, and what causes them.
+---
+
+## "The root component must render a single &lt;Presentation&gt;"
+
+The component given to `<Preview>`, `usePptx`, `pptx()` or the `renderTo*` functions has to start with `<Presentation>`. A wrapper element, or a fragment with siblings around it, isn't valid.
+
+## "Text … inside &lt;SLIDE&gt; is dropped. Wrap it in &lt;Text&gt;."
+
+Strings only render inside `<Text>`, `<Paragraph>`, `<Run>`, `<Shape>`, `<TableCell>`, `<Notes>` and `<Placeholder>`. A string directly in a `<Slide>`, `<View>` or `<Table>` is dropped. Wrap it.
+
+## "&lt;PARAGRAPH&gt; can't be placed directly on a slide; it is skipped."
+
+`<Paragraph>`, `<Run>` and `<Br>` only work inside a text box (`<Text>`, `<Shape>`, a table cell or `<Notes>`). `<TableRow>` and `<TableCell>` only work inside `<Table>`.
+
+## "&lt;TEXT&gt; must be inside a &lt;Slide&gt; or &lt;Master&gt;; it is skipped."
+
+`<Presentation>` holds only `<Slide>` and `<Master>` elements. Everything else goes inside one of them.
+
+## "No &lt;Master name="…"&gt;; the slide uses the default master."
+
+A slide's `master` prop names a master that doesn't exist. Names are case-sensitive.
+
+## "A table can't be part of a master; it is skipped."
+
+PptxGenJS masters take text, images, single-type charts, placeholders, and `rect` and `line` shapes. Tables, media, other shapes and combo charts are skipped when the file is written, though the preview still draws them. Put them on the slides instead. See [Masters](/guides/masters#what-a-master-can-hold).
+
+## "Unknown layout" or "A custom layout needs a width and a height"
+
+`<Presentation layout>` takes `16x9`, `16x10`, `4x3`, `wide` (or PptxGenJS's names, such as `LAYOUT_WIDE`), or `{ width, height }` with both set.
+
+## "Unknown chart type"
+
+`type` must be one of `area`, `bar`, `bar3D`, `bubble`, `bubble3D`, `doughnut`, `line`, `pie`, `radar` and `scatter`, in any case. For a combo chart, each part's `type` must be one of these.
+
+## "This presentation was unmounted."
+
+A method of a `pptx()` instance, such as `toBlob()`, was called after its `unmount()`. Create a new instance, or call `unmount()` only once you're done with it.
+
+## Text sits in the middle of its box
+
+PptxGenJS centers text vertically, as PowerPoint does for new shapes. Set `valign="top"` (or `bottom`).
+
+## Text looks different in PowerPoint
+
+PowerPoint doesn't embed fonts. A `font-face` the viewer's machine lacks falls back to another font, which changes line breaks. Use fonts that ship with Office for decks you share. The preview uses the browser's fonts, so it can differ in the same way; see [Preview limits](/guides/preview#limits).
+
+## A table runs past the bottom of the slide
+
+PowerPoint grows table rows to fit their text when it opens the file, so a table with many rows or long cells gets taller than its box. Set `auto-page` to continue on new slides, or reduce `font-size` and `margin`.
+
+## Remote images are missing from the file
+
+In the browser, PptxGenJS fetches image URLs, so they must be same-origin or allow cross-origin requests (`Access-Control-Allow-Origin`). Use a data URI to avoid the request. In Node, use a file path or a data URI.
+
+## require() of ES Module
+
+The package is ESM only. In CommonJS code, load it with `await import('vue-pptx-document')`. Node's `require(esm)` support in 20.19 and newer also works.
+
+## The deck doesn't see my i18n, store or injected values
+
+It runs as a separate Vue app, so plugins and `provide` from the page don't reach it. Pass the values in as props.
+
+## The flex layout differs between the browser and Node
+
+Text without a fixed size is measured with a canvas in the browser and with average glyph widths in Node. Fix the height of text boxes whose size matters. See [Server and Node](/guides/server#text-measurement-in-node).

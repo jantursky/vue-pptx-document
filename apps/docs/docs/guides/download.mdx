@@ -1,0 +1,159 @@
+---
+title: Composables and download
+description: Write the .pptx with usePptx, PptxDownloadButton, downloadPptx, the pptx() instance and the renderTo functions.
+---
+
+Writing a file runs PptxGenJS and zips the result, which takes longer than drawing the preview. Pick the tool by when the file should be built.
+
+| you want                                  | use                                                                 |
+| ----------------------------------------- | ------------------------------------------------------------------- |
+| A download button, file built on click    | [`<PptxDownloadButton>`](#pptxdownloadbutton)                       |
+| A file built from code, once              | [`downloadPptx()`](#downloadpptx), [`renderToBlob()`](#render-once) |
+| A Blob and URL that follow reactive state | [`usePptx()`](#usepptx)                                             |
+| Several outputs from one mounted tree     | [`pptx()`](#the-pptx-instance)                                      |
+
+## PptxDownloadButton
+
+Renders a `<button>` that builds the file when it's clicked and saves it:
+
+```vue
+<PptxDownloadButton :document="ReportDeck" :document-props="{ rows, quarter }" file-name="quarterly-review.pptx" />
+```
+
+| prop             | default               |                                           |
+| ---------------- | --------------------- | ----------------------------------------- |
+| `document`       | required              | The presentation component.               |
+| `document-props` | `undefined`           | Its props, read at the time of the click. |
+| `file-name`      | `'presentation.pptx'` | The name the browser saves the file as.   |
+
+| event   | payload |                                  |
+| ------- | ------- | -------------------------------- |
+| `done`  | `Blob`  | After the file has been saved.   |
+| `error` | `error` | When rendering or writing fails. |
+
+The default slot receives `{ loading, error }` and falls back to "Download PPTX", or "Preparing…" while it works:
+
+```vue
+<PptxDownloadButton :document="HelloDeck" :document-props="{ name }" @done="(blob) => console.log(blob.size)">
+  <template #default="{ loading }">{{ loading ? 'Building…' : 'Get the deck' }}</template>
+</PptxDownloadButton>
+```
+
+It renders `button[data-pptx-download]` with `data-loading` and `aria-busy="true"` while it works, and ignores clicks until it's done. Since the file is built on click and not on every change, editing a large deck stays fast.
+
+## downloadPptx
+
+`downloadPptx(presentation, props?, fileName?, options?)` renders once, saves the file through a temporary link and resolves to the Blob. The name defaults to `presentation.pptx`, and `.pptx` is appended when it's missing:
+
+```ts
+import { downloadPptx } from 'vue-pptx-document'
+
+const blob = await downloadPptx(ChartsDeck, { seed: 7 }, 'charts')
+```
+
+`saveBlob(blob, fileName)` is the saving half on its own, for a Blob you got elsewhere. It keeps the object URL valid for 10 seconds after the click, which Safari needs.
+
+To keep PptxGenJS and the deck out of the initial bundle, import both inside the handler, as the demo's _On demand_ section does:
+
+```ts
+const download = async () => {
+  const [{ downloadPptx }, { default: ChartsDeck }] = await Promise.all([
+    import('vue-pptx-document'),
+    import('./ChartsDeck.vue'),
+  ])
+  await downloadPptx(ChartsDeck, { seed: 7 }, 'charts.pptx')
+}
+```
+
+## Render once
+
+| function                                         | resolves to                                           |
+| ------------------------------------------------ | ----------------------------------------------------- |
+| `renderToBlob(presentation, props?, options?)`   | A `Blob` with the PowerPoint MIME type (`PPTX_MIME`). |
+| `renderToBuffer(presentation, props?, options?)` | A `Uint8Array`. Needs no DOM.                         |
+| `renderToModel(presentation, props?)`            | The resolved `DeckModel`, without loading PptxGenJS.  |
+
+Each one mounts the deck in a Vue app of its own, renders it and unmounts it. `options` is `{ compression }`: the zip is deflated by default, and `compression: false` writes larger files faster.
+
+## usePptx
+
+`usePptx(presentation, props?, options?)` keeps a `.pptx` Blob and an object URL current. Use it when the file should always be ready, for a plain `<a download>` link or to upload it:
+
+```vue
+<script setup lang="ts">
+import { computed, ref } from 'vue'
+import { usePptx } from 'vue-pptx-document'
+
+import HelloDeck from './HelloDeck.vue'
+
+const name = ref('Ada')
+const props = computed(() => ({ name: name.value }))
+
+const { blob, url, loading, error } = usePptx(HelloDeck, props, { debounce: 400 })
+</script>
+
+<template>
+  <input v-model="name" />
+  <a :href="url ?? undefined" download="hello.pptx" :aria-disabled="url ? undefined : 'true'">Download</a>
+  <p v-if="blob">{{ (blob.size / 1024).toFixed(1) }} kB{{ loading ? ', updating…' : '' }}</p>
+  <p v-if="error">{{ String(error) }}</p>
+</template>
+```
+
+`props` may be a plain object, a ref or a getter. A change to it, or to any reactive state the deck reads, renders again after the debounce.
+
+| option        | default |                                                                                 |
+| ------------- | ------- | ------------------------------------------------------------------------------- |
+| `debounce`    | `300`   | Milliseconds between the last change and a render.                              |
+| `auto`        | `true`  | Render on mount and after every change. `false`: only when you call `update()`. |
+| `compression` | `true`  | Deflate the zip.                                                                |
+
+It returns read-only refs `blob`, `url`, `loading` and `error`, and `update()`, which renders now and resolves to the new Blob (or `null` when it failed). Rendering starts on mount, so server-side rendering of the page never runs PptxGenJS. A replaced URL stays valid for 10 seconds so a download still reading it can finish, and every URL is revoked when the component unmounts.
+
+With `auto: false`, nothing renders until you ask:
+
+```ts
+const { update } = usePptx(ReportDeck, () => ({ rows, quarter: quarter.value }), { auto: false })
+
+const upload = async () => {
+  const blob = await update()
+  if (blob) await fetch('/api/decks', { method: 'POST', body: blob })
+}
+```
+
+## The pptx() instance
+
+`pptx(presentation, props?)` mounts the deck and returns an instance you can render from as often as you like. `props` may be a ref or a getter, and the tree follows it:
+
+```ts
+import { pptx } from 'vue-pptx-document'
+
+const instance = pptx(ReportDeck, { rows, quarter: 'Q3 2026' })
+const model = await instance.toModel()
+const blob = await instance.toBlob()
+const base64 = await instance.toBase64({ compression: false })
+instance.unmount()
+```
+
+| method               |                                                                                   |
+| -------------------- | --------------------------------------------------------------------------------- |
+| `toModel()`          | The resolved `DeckModel`: frames in inches and PptxGenJS options.                 |
+| `toBlob(options?)`   | A `Blob`. Calls the `<Presentation>`'s `onRender` with `{ blob }`.                |
+| `toBuffer(options?)` | A `Uint8Array`.                                                                   |
+| `toBase64(options?)` | A base64 string.                                                                  |
+| `toPptxGenJS()`      | The PptxGenJS presentation, built but not written.                                |
+| `onChange(listener)` | Calls `listener` after every change to the tree. Returns an unsubscribe function. |
+| `unmount()`          | Unmounts the Vue app. Later calls reject.                                         |
+
+### Going past the components
+
+`toPptxGenJS()` gives you PptxGenJS's own object, so anything the components don't cover can be added before writing:
+
+```ts
+const deck = await pptx(ReportDeck, props).toPptxGenJS()
+const slide = deck.addSlide()
+slide.addText('Added with the PptxGenJS API', { x: 0.5, y: 0.5, w: 9, h: 1 })
+await deck.writeFile({ fileName: 'report.pptx' })
+```
+
+The same works on a model: `toPptxGenJS(model)` and `writeModel(model, outputType, options?)` take a `DeckModel`, from `renderToModel()` or from [`parsePptx()`](/guides/import), and build or write it. `outputType` is `blob`, `arraybuffer`, `uint8array`, `base64` or `nodebuffer`.

@@ -1,0 +1,10 @@
+dist/
+coverage/
+node_modules/
+bun.lock
+docs/inspirations/
+.blume/
+apps/docs/docs/_generated/
+.blume-verify/
+test-results/
+playwright-report/

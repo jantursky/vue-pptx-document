@@ -1,0 +1,142 @@
+---
+title: Import and codegen
+description: Read a .pptx file and write a Vue component that renders the same slides, from code or from the command line.
+---
+
+`vue-pptx-document/import` goes the other way: it reads a PowerPoint file into the same model the writer and the preview use, and writes that model out as a Vue single-file component. Start from a deck someone designed in PowerPoint, then replace the fixed text with props.
+
+The importer is its own entry point. Apps that only render slides never load it or its XML parser.
+
+## From the command line
+
+```sh
+npx vue-pptx-document import deck.pptx -o Deck.vue
+```
+
+| option             |                                                                             |
+| ------------------ | --------------------------------------------------------------------------- |
+| `-o, --out <file>` | Write the component to this file. Without it, the component goes to stdout. |
+| `--no-images`      | Refer to pictures as `media/<name>` instead of embedding them as data URIs. |
+| `--no-master`      | Skip the shapes slides inherit from their layout and master.                |
+| `--from <module>`  | Import the components from this module instead of `vue-pptx-document`.      |
+| `-h, --help`       | Show the help.                                                              |
+
+Warnings go to stderr as `warning: ...` lines, followed by a summary such as `deck.pptx: 12 slides written to Deck.vue`.
+
+With `--no-images`, copy the pictures next to your app yourself: a `.pptx` is a zip file, and they are in its `ppt/media` folder.
+
+## From code
+
+`pptxToVue(input, options?)` does both steps. `input` is an `ArrayBuffer`, a `Uint8Array` or a `Blob`, such as a `File` from an `<input type="file">`:
+
+```ts
+import { readFile, writeFile } from 'node:fs/promises'
+
+import { pptxToVue } from 'vue-pptx-document/import'
+
+const { code, model, warnings } = await pptxToVue(await readFile('deck.pptx'), { embedImages: true })
+await writeFile('Deck.vue', code)
+for (const warning of warnings) console.warn(warning)
+console.log(`${model.slides.length} slides`)
+```
+
+In the browser, load the entry when a file arrives:
+
+```ts
+const onFile = async (file: File) => {
+  const { pptxToVue } = await import('vue-pptx-document/import')
+  const { code, model, warnings } = await pptxToVue(file)
+  // Show `model` with <SlidePreview>, offer `code` for copying.
+}
+```
+
+The demo app's [Import tab](https://vue-pptx-document.vercel.app/#import) does this, with a preview of each imported slide.
+
+| option         | default               |                                                                                 |
+| -------------- | --------------------- | ------------------------------------------------------------------------------- |
+| `masterShapes` | `true`                | Copy the shapes and pictures of each slide's layout and master onto the slide.  |
+| `embedImages`  | `true`                | Embed pictures as data URIs. `false`: `media/<name>` paths.                     |
+| `importFrom`   | `'vue-pptx-document'` | The module the generated component imports from.                                |
+| `inlineLimit`  | `100`                 | Values longer than this many characters move to a constant in `<script setup>`. |
+
+### The two steps
+
+`parsePptx(input, options?)` returns `{ model, warnings }` without writing code. The model can go straight to `<SlidePreview>`, to `writeModel()` to save it again, or to `modelToVue()`:
+
+```ts
+import { parsePptx, modelToVue } from 'vue-pptx-document/import'
+
+const { model } = await parsePptx(bytes, { masterShapes: false })
+const code = modelToVue(model, { importFrom: '@/lib/slides', inlineLimit: 80 })
+```
+
+## What gets imported
+
+| from the file                          | becomes                                                                                                                                                    |
+| -------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Slide size                             | `layout="16x9"`, `16x10`, `4x3` or `wide` when it matches, otherwise `{ width, height }`.                                                                  |
+| Title, author, subject, company        | `<Presentation>` props.                                                                                                                                    |
+| Text boxes and shapes with text        | `<Text>` with `<Paragraph>` and `<Run>`, keeping fonts, sizes, colors, bold, italic, underline, alignment, bullets, numbering, spacing and external links. |
+| Preset shapes and connectors           | `<Shape>` with fill, line and rotation.                                                                                                                    |
+| Pictures                               | `<Image>`, embedded or as `media/` paths.                                                                                                                  |
+| Tables                                 | `<Table>` with a `rows` constant and column widths.                                                                                                        |
+| Charts                                 | `<Chart>` for every type PptxGenJS can write, including combos, with series, colors and the main axis settings.                                            |
+| Groups                                 | Their shapes, flattened, at their positions on the slide.                                                                                                  |
+| Backgrounds                            | A color or an image, taken from the layout or master when the slide has none.                                                                              |
+| Layout and master shapes               | Copied onto each slide, unless `masterShapes` is off or the slide hides them.                                                                              |
+| Slide numbers                          | `slide-number` with the field's position.                                                                                                                  |
+| Sections, hidden slides, speaker notes | `section`, `hidden` and `<Notes>`.                                                                                                                         |
+| Theme colors                           | Resolved to hex through the deck's theme.                                                                                                                  |
+
+Masters themselves aren't recreated: the generated component has no `<Master>`, and each slide carries what it inherited.
+
+### What doesn't
+
+Each of these adds a message to `warnings`:
+
+- Gradient fills are imported as their first color.
+- Picture and pattern fills are not imported.
+- Freeform shapes (custom geometry) become rectangles.
+- Video and audio become their poster picture.
+- Charts of a type PptxGenJS can't write are skipped.
+- SmartArt and other embedded objects are skipped.
+- EMF and WMF pictures are imported but don't show in a browser preview.
+
+## The generated code
+
+The component is plain and absolute: every object has `x`, `y`, `w` and `h` in inches, colors are written as `#RRGGBB`, and only the components it uses are imported. Long values, such as table rows, chart data, embedded images and long option objects, move into constants (`rows1`, `data1`, `image1`, ...) in `<script setup>`, and identical values share one constant.
+
+```vue
+<script setup lang="ts">
+import { Presentation, Shape, Slide, Text } from 'vue-pptx-document'
+</script>
+
+<template>
+  <Presentation layout="16x9" title="Hello">
+    <Slide background="#FAFAFA">
+      <Shape type="rect" :x="0.6" :y="1.9" :w="0.06" :h="1.1" fill="#F35815" />
+      <Text :x="0.85" :y="1.8" :w="8.5" :h="0.8" valign="top" :font-size="40" bold color="#000000">Hello, Ada</Text>
+    </Slide>
+  </Presentation>
+</template>
+```
+
+From there, swap literal text for props and repeated objects for `v-for`.
+
+## From a model
+
+`modelToVue()` takes any `DeckModel`, not only an imported one. Run it on `renderToModel()` to see what a deck resolves to, for example the absolute frames Yoga computed for a flex layout:
+
+```ts
+import { renderToModel } from 'vue-pptx-document'
+import { modelToVue } from 'vue-pptx-document/import'
+
+import LayoutDeck from './LayoutDeck.vue'
+
+const model = await renderToModel(LayoutDeck, { cards: ['One', 'Two', 'Three'], direction: 'row' })
+console.log(modelToVue(model))
+```
+
+The demo's _Generate Vue code_ section shows the result.
+
+`literal(value)` is the helper the code generator uses to print values as JavaScript literals with single-quoted strings, exported for tools that write templates of their own.

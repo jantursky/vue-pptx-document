@@ -1,0 +1,94 @@
+---
+title: Tables
+description: Native PowerPoint tables, from a rows array or from TableRow and TableCell components.
+---
+
+`<Table>` writes a native table. Give it rows in one of two ways.
+
+## TableRow and TableCell
+
+Templates read best with components. `v-for` builds the rows, and each cell takes run and paragraph styles:
+
+```vue
+<Table
+  :x="0.5"
+  :y="1.15"
+  :w="9"
+  :col-w="[3.5, 3.5, 2]"
+  :font-size="12"
+  :border="{ type: 'solid', color: 'C1C1C1', pt: 0.75 }"
+>
+  <TableRow bold color="#FAFAFA" :fill="{ color: '111111' }">
+    <TableCell>Team</TableCell>
+    <TableCell>Owner</TableCell>
+    <TableCell>Status</TableCell>
+  </TableRow>
+  <TableRow v-for="row in rows" :key="row.team">
+    <TableCell>{{ row.team }}</TableCell>
+    <TableCell>{{ row.owner }}</TableCell>
+    <TableCell bold :color="status[row.status]">{{ row.status }}</TableCell>
+  </TableRow>
+</Table>
+```
+
+Props on a `<TableRow>` apply to each of its cells, and a cell's own props win. A cell may hold `<Run>`, `<Paragraph>` and `<Br>` like a text box; plain text stays a plain string.
+
+## The rows prop
+
+For data that's already an array, pass `rows`. Each cell is a string, a number, a boolean, `null`, or PptxGenJS's `{ text, options }`:
+
+```ts
+const rows = computed(() => [
+  ['Region', 'Revenue', 'Target', 'Of target'].map((text) => ({
+    text,
+    options: { bold: true, color: '#FAFAFA', fill: { color: '111111' } },
+  })),
+  ...regions.value.map((region) => [
+    region.name,
+    { text: format(region.revenue), options: { align: 'right' as const } },
+    { text: format(region.target), options: { align: 'right' as const } },
+    {
+      text: `${Math.round((region.revenue / region.target) * 100)} %`,
+      options: { align: 'right' as const, bold: true },
+    },
+  ]),
+])
+```
+
+```vue
+<Table :rows="rows" :x="0.5" :y="1.2" :w="6" :font-size="12" :border="{ type: 'solid', color: 'C1C1C1', pt: 0.75 }" />
+```
+
+When `rows` is set, `<TableRow>` children are ignored. `null` and `undefined` become empty cells, and a cell option `fill: '#F35815'` is a shorthand for `{ color }`, as on shapes.
+
+## Table props
+
+| prop                                                            |                                                                                                                    |
+| --------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| `col-w`                                                         | Column widths: one length for all, or one per column. With an array and no `w`, the table is as wide as their sum. |
+| `row-h`                                                         | Row heights, the same way.                                                                                         |
+| `font-size`, `font-face`, `color`                               | Defaults for every cell.                                                                                           |
+| `fill`                                                          | Background of every cell.                                                                                          |
+| `border`                                                        | `{ type, color, pt }`, or four of them for top, right, bottom and left.                                            |
+| `align`, `valign`                                               | Defaults for every cell.                                                                                           |
+| `margin`                                                        | Cell padding in inches: one number, or `[top, right, bottom, left]`.                                               |
+| `auto-page`, `auto-page-repeat-header`, `auto-page-header-rows` | PptxGenJS's automatic paging: overflow rows continue on new slides.                                                |
+| `bold`, `italic`, `underline`, ...                              | Run styles for every cell.                                                                                         |
+
+Any other prop goes to PptxGenJS's `addTable` options.
+
+`col-w` and `row-h` take [lengths](/guides/layout#units), so `'30%'` is a share of the table's width (or height).
+
+## Cell props
+
+| prop                     |                                                                             |
+| ------------------------ | --------------------------------------------------------------------------- |
+| `colspan`, `rowspan`     | Merge cells. Leave the covered cells out of the following rows, as in HTML. |
+| `fill`, `border`         | As on the table.                                                            |
+| `valign`, `align`        | Alignment inside the cell.                                                  |
+| `margin`                 | `[top, right, bottom, left]` in inches, or one number.                      |
+| run and paragraph styles | `bold`, `color`, `font-size`, `bullet`, ...                                 |
+
+## Height
+
+A table without `h` gets one row height per row: `row-h` when it's set, otherwise an estimate from the font size. PowerPoint grows rows to fit their text when it opens the file, so a table may end up taller than the box you gave it; leave room below or use `auto-page`.

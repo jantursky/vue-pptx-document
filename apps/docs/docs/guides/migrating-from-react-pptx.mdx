@@ -1,0 +1,38 @@
+---
+title: Migrating from react-pptx
+description: Map a react-pptx presentation to Vue, piece by piece.
+---
+
+[react-pptx](https://github.com/wyozi/react-pptx) and this library both sit on PptxGenJS and use inches with percentage strings, so positions carry over. The main differences: positions and styles are props instead of a `style` object, and `style` is reserved for flexbox.
+
+| react-pptx                                                                  | vue-pptx-document                                                     |
+| --------------------------------------------------------------------------- | --------------------------------------------------------------------- |
+| `<Text style={{ x: 1, y: 1, w: 3, h: 0.5, fontSize: 32 }}>`                 | `<Text :x="1" :y="1" :w="3" :h="0.5" :font-size="32">`                |
+| `style={{ color, fontFace, bold, italic }}`                                 | `color`, `font-face`, `bold`, `italic` props                          |
+| `style={{ align: 'center', verticalAlign: 'top' }}`                         | `align="center" valign="top"`                                         |
+| `<Text.Bullet>`                                                             | `<Paragraph bullet>`                                                  |
+| `<Text.Link url="…">`                                                       | `<Run href="…">`                                                      |
+| `<Shape type="rect" style={{ backgroundColor, borderColor, borderWidth }}>` | `<Shape type="rect" fill="…" :line="{ color, width }">`               |
+| `<Line>`                                                                    | `<Shape type="line" :h="0" :line="{ … }">`                            |
+| `<Image src={{ kind: 'path', path }}>`                                      | `<Image :src="path">`; a data URI works as `src` too                  |
+| `<Table>`, `<Table.Row>`, `<Table.Cell>`                                    | `<Table>`, `<TableRow>`, `<TableCell>`, or the `rows` prop            |
+| `<Notes>`                                                                   | `<Notes>`, or the `notes` prop                                        |
+| `<Masters><MasterSlide name="…">` and `<Slide masterName="…">`              | `<Master name="…">` inside `<Presentation>`, and `<Slide master="…">` |
+| `<Slide style={{ backgroundColor }}>`                                       | `<Slide background="…">`                                              |
+| `{items.map((item) => <Text key={…}>)}`                                     | `<Text v-for="item in items" :key="…">`                               |
+| `{flag && <Shape />}`                                                       | `<Shape v-if="flag" />`                                               |
+| `render(<Deck />)`                                                          | `renderToBuffer(Deck, props)` or `renderToBlob(Deck, props)`          |
+| `<Preview><Deck /></Preview>`                                               | `<Preview :document="Deck" :document-props="…" />`                    |
+
+What this library adds:
+
+- **Charts.** `<Chart>` writes every PptxGenJS chart type and combo charts. See [Charts](/guides/charts).
+- **Flexbox.** `<View>` and `<Slide layout="flex">` place objects with Yoga instead of fixed coordinates. See [Layout](/guides/layout#flexbox).
+- **More units.** `cm`, `mm`, `pt`, `px` and `emu` besides inches and percentages.
+- **Reactivity.** `<Preview>` and `usePptx()` follow reactive state; there's no need to re-render the whole tree by hand.
+- **Import.** `vue-pptx-document/import` turns an existing `.pptx` into a component. See [Import and codegen](/guides/import).
+
+Two things to keep in mind:
+
+- Decks are passed as a component plus props, not as an element. The preview and the composables re-render when those props, or any reactive state the deck reads, change.
+- The deck runs as its own Vue app. It doesn't inherit `provide`/`inject`, plugins (i18n, Pinia) or global components from the page. Pass translated strings and store data in as props.

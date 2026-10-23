@@ -1,0 +1,143 @@
+---
+title: Charts
+description: Native PowerPoint charts of every type PptxGenJS writes, and combo charts.
+---
+
+`<Chart>` writes a native chart: PowerPoint can edit its data, restyle it and change its type. Pass a `type` and a `data` array of series:
+
+```vue
+<script setup lang="ts">
+import { Chart, Presentation, Slide, type ChartSeries } from 'vue-pptx-document'
+
+const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun']
+const data: ChartSeries[] = [
+  { name: 'North', labels: months, values: [32, 45, 51, 48, 62, 70] },
+  { name: 'South', labels: months, values: [28, 30, 41, 55, 49, 58] },
+]
+</script>
+
+<template>
+  <Presentation>
+    <Slide>
+      <Chart
+        type="bar"
+        :data="data"
+        :x="0.5"
+        :y="1"
+        :w="9"
+        :h="4.3"
+        bar-dir="col"
+        :chart-colors="['#F35815', '#111111']"
+        show-legend
+        legend-pos="b"
+        :val-grid-line="{ color: 'E5E5E5', size: 1 }"
+      />
+    </Slide>
+  </Presentation>
+</template>
+```
+
+## Types
+
+| `type`               | data                                                                                           |
+| -------------------- | ---------------------------------------------------------------------------------------------- |
+| `bar`, `bar3D`       | `{ name, labels, values }` per series. `bar-dir="col"` for columns, `bar` for horizontal bars. |
+| `line`, `area`       | The same.                                                                                      |
+| `radar`              | The same.                                                                                      |
+| `pie`, `doughnut`    | One series; its `labels` name the slices.                                                      |
+| `scatter`            | The first series holds the X values; each further series is a set of Y values.                 |
+| `bubble`, `bubble3D` | As scatter, with `sizes` on each Y series.                                                     |
+
+The type is case-insensitive, so `bar3d` works too. An unknown type throws `Unknown chart type`.
+
+```ts
+const scatter: ChartSeries[] = [
+  { name: 'X', values: [10, 24, 38, 52, 66] },
+  { name: 'Accounts', values: [12, 31, 30, 47, 58] },
+]
+
+const bubble: ChartSeries[] = [
+  { name: 'X', values: [10, 24, 38] },
+  { name: 'Markets', values: [40, 72, 18], sizes: [6, 14, 9] },
+]
+```
+
+## Options
+
+Every prop other than position, `type` and `data` is a PptxGenJS [chart option](https://gitbrent.github.io/PptxGenJS/docs/api-charts/), written in kebab case in a template. Some common ones:
+
+| prop                                                                 |                                                                         |
+| -------------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| `title`, `show-title`                                                | The chart title.                                                        |
+| `show-legend`, `legend-pos`                                          | `legend-pos` is `b`, `t`, `l`, `r` or `tr`.                             |
+| `chart-colors`                                                       | Series colors (slice colors for pie and doughnut).                      |
+| `bar-dir`, `bar-grouping`                                            | `col` or `bar`; `clustered`, `stacked`, `percentStacked` or `standard`. |
+| `show-value`, `show-percent`, `show-label`                           | Data labels.                                                            |
+| `hole-size`                                                          | Doughnut hole, in percent.                                              |
+| `line-smooth`, `line-size`, `line-data-symbol-size`                  | Line charts.                                                            |
+| `cat-axis-hidden`, `val-axis-hidden`                                 | Hide an axis.                                                           |
+| `val-axis-min-val`, `val-axis-max-val`, `val-axis-label-format-code` | The value axis.                                                         |
+| `show-val-axis-title`, `val-axis-title`                              | An axis title.                                                          |
+| `val-grid-line`, `cat-grid-line`                                     | `{ color, size, style }`; `{ style: 'none' }` hides it.                 |
+| `radar-style`                                                        | `standard`, `marker` or `filled`.                                       |
+
+Boolean options such as `show-legend`, `show-value`, `show-percent`, `show-label`, `show-title`, `show-leader-lines`, `show-ser-name`, `show-data-table`, `cat-axis-hidden`, `val-axis-hidden`, `show-val-axis-title` and `show-cat-axis-title` work as bare attributes. Colors in any option are normalized as described in [Colors](/guides/text#colors).
+
+Since chart options are ordinary props, `v-bind` passes a whole set at once, which is how the demo app's chart deck switches between chart types:
+
+```vue
+<Chart :type="chart.type" :data="chart.data" :x="0.5" :y="1" :w="9" :h="4.3" show-legend v-bind="chart.options" />
+```
+
+## Combo charts
+
+Pass an array of `{ type, data, options }` as `type` for several chart types on one plot area. `data` on the `<Chart>` itself is ignored then:
+
+```vue
+<script setup lang="ts">
+import { Chart, Presentation, Slide, type ComboChart } from 'vue-pptx-document'
+
+const labels = ['Q1', 'Q2', 'Q3', 'Q4']
+const combo: ComboChart[] = [
+  {
+    type: 'bar',
+    data: [{ name: 'Revenue', labels, values: [120, 140, 135, 170] }],
+    options: { chartColors: ['#C1C1C1'] },
+  },
+  {
+    type: 'line',
+    data: [{ name: 'Margin', labels, values: [18, 21, 19, 24] }],
+    options: { chartColors: ['#F35815'], secondaryValAxis: true, secondaryCatAxis: true },
+  },
+]
+</script>
+
+<template>
+  <Presentation>
+    <Slide>
+      <Chart
+        :type="combo"
+        :x="0.5"
+        :y="1"
+        :w="9"
+        :h="4.3"
+        show-legend
+        legend-pos="b"
+        :val-axes="[{ showValAxisTitle: false }, { showValAxisTitle: false }]"
+        :cat-axes="[{}, { catAxisHidden: true }]"
+      />
+    </Slide>
+  </Presentation>
+</template>
+```
+
+A part with `secondaryValAxis: true` plots against a second value axis; `val-axes` and `cat-axes` then take one options object per axis, as in PptxGenJS.
+
+## In flex layouts
+
+A chart without a size defaults to at most 4 × 3 inches. Give it `:style="{ flexGrow: 1 }"` or `{ flex: 2 }` to fill the space a flex container leaves.
+
+## Limits
+
+- A combo chart can't be part of a `<Master>`; masters take single-type charts only.
+- `<Preview>` draws every type, combos included, as SVG with PowerPoint's default look. Options it doesn't know are ignored there but still written to the file. See [Preview](/guides/preview#limits).

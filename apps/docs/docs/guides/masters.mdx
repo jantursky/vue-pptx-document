@@ -1,0 +1,83 @@
+---
+title: Masters and placeholders
+description: Slide masters with shared backgrounds, footers and slide numbers, and placeholders slides fill in.
+---
+
+A `<Master>` is a PowerPoint slide master: a background and a set of objects that every slide using it shows behind its own content. Masters go inside `<Presentation>`, before or between the slides, and a slide picks one by name:
+
+```vue
+<Presentation title="Quarterly review" layout="16x9">
+  <Master name="BRAND" background="#FAFAFA" :slide-number="{ x: 9, y: 5.2, w: 0.6, h: 0.3, fontSize: 10, color: '#737373' }">
+    <Shape type="rect" :x="0" :y="0" :w="10" :h="0.12" fill="#111111" />
+    <Text :x="0.5" :y="5.2" :w="6" :h="0.3" :font-size="10" color="#737373">Quarterly review · internal</Text>
+    <Shape type="line" :x="0.5" :y="5.15" :w="9" :h="0" :line="{ color: '#C1C1C1', width: 0.75 }" />
+  </Master>
+
+  <Slide master="BRAND">
+    <Text :x="0.5" :y="0.4" :w="9" :h="0.6" :font-size="24" bold valign="top">What changed</Text>
+  </Slide>
+</Presentation>
+```
+
+In PowerPoint, the band, the footer and the line live on the master, so they can't be moved by accident on a slide, and editing the master changes every slide at once.
+
+## Master props
+
+| prop              |                                                                                                                            |
+| ----------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| `name`            | The name slides refer to. Without one, masters are named `MASTER_1`, `MASTER_2`, ...                                       |
+| `background`      | A color, an image URL or data URI, or `{ color, transparency, src }`.                                                      |
+| `margin`          | PptxGenJS's master margin.                                                                                                 |
+| `slide-number`    | `true`, or the position and run styles of the slide number. See [Slide numbers](/guides/sections-and-notes#slide-numbers). |
+| `layout`, `style` | `layout="flex"` lays the master's objects out with flexbox, as on a slide.                                                 |
+
+A slide whose `master` names no `<Master>` logs a warning and uses PowerPoint's default master.
+
+## What a master can hold
+
+PptxGenJS masters take a smaller set of objects than slides:
+
+| object                 | on a master                                                                                    |
+| ---------------------- | ---------------------------------------------------------------------------------------------- |
+| `<Text>`               | Yes, as one string. The formatting of the first run applies to the whole box.                  |
+| `<Shape>`              | `rect` and `line` only.                                                                        |
+| `<View>` with a `fill` | Yes when it draws a plain rectangle; a `rect-radius` makes it a `roundRect`, which is skipped. |
+| `<Image>`              | Yes.                                                                                           |
+| `<Chart>`              | Single-type charts. Combo charts are skipped.                                                  |
+| `<Placeholder>`        | Yes, see below.                                                                                |
+| `<Table>`, `<Media>`   | No.                                                                                            |
+
+Anything a master can't hold is skipped with a console warning when the file is written: `A table can't be part of a master; it is skipped.` The preview still draws it, so check the warning when a master looks right in `<Preview>` and wrong in PowerPoint.
+
+## Placeholders
+
+A `<Placeholder>` on a master reserves a box that slides fill in. Its text is the prompt PowerPoint shows in an empty placeholder:
+
+```vue
+<Master name="TITLE_AND_BODY" background="#FFFFFF">
+  <Placeholder name="title" type="title" :x="0.5" :y="0.3" :w="9" :h="0.8" :font-size="28" bold>Click to add a title</Placeholder>
+  <Placeholder name="body" type="body" :x="0.5" :y="1.3" :w="9" :h="3.8" :font-size="16" valign="top" />
+</Master>
+
+<Slide master="TITLE_AND_BODY">
+  <Text placeholder="title">Status by team</Text>
+  <Text placeholder="body">
+    <Paragraph bullet>Checkout shipped</Paragraph>
+    <Paragraph bullet>Search is at risk</Paragraph>
+  </Text>
+</Slide>
+```
+
+A `<Text placeholder="...">` takes the placeholder's position and its options, both in the file and in the preview, so it needs no `x`, `y`, `w` or `h` of its own. Its own props, such as `color`, override the placeholder's.
+
+| `<Placeholder>` prop |                                                                  |
+| -------------------- | ---------------------------------------------------------------- |
+| `name`               | Required. The name `placeholder` on a slide's text refers to.    |
+| `type`               | `title`, `body` (the default), `pic`, `chart`, `tbl` or `media`. |
+| text props           | Position, font, alignment and box options, as on `<Text>`.       |
+
+A `<Placeholder>` placed directly on a slide is written as a plain text box.
+
+## Themes and layouts
+
+`<Presentation head-font-face="Arial" body-font-face="Arial">` sets the theme fonts that text without a `font-face` uses. Theme colors (`accent1` to `accent6`, `tx1`, `tx2`, `bg1`, `bg2`) refer to PowerPoint's default Office theme, since PptxGenJS doesn't write custom theme colors.

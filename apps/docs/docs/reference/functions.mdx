@@ -1,0 +1,143 @@
+---
+title: Functions
+description: pptx, renderToBlob, renderToBuffer, renderToModel, downloadPptx, saveBlob, writeModel, toPptxGenJS and the helpers.
+---
+
+All of these come from `vue-pptx-document`. `props` is the deck component's props as a plain object, except for `pptx()`, which also takes a ref or a getter.
+
+## renderToBlob
+
+```ts
+function renderToBlob(presentation: Component, props?: Props, options?: WriteOptions): Promise<Blob>
+```
+
+Mounts the deck, writes it once and unmounts it. The Blob's type is `PPTX_MIME`.
+
+## renderToBuffer
+
+```ts
+function renderToBuffer(presentation: Component, props?: Props, options?: WriteOptions): Promise<Uint8Array>
+```
+
+The same, resolving to the file's bytes. Needs no DOM, so it works in Node and workers. See [Server and Node](/guides/server).
+
+## renderToModel
+
+```ts
+function renderToModel(presentation: Component, props?: Props): Promise<DeckModel>
+```
+
+Mounts the deck, resolves it to its [DeckModel](/reference/types#deckmodel) and unmounts it. PptxGenJS isn't loaded.
+
+## downloadPptx
+
+```ts
+function downloadPptx(presentation: Component, props?: Props, fileName?: string, options?: WriteOptions): Promise<Blob>
+```
+
+Renders once with `renderToBlob()` and saves the file with `saveBlob()`. `fileName` defaults to `'presentation.pptx'`; `.pptx` is appended when it's missing. Resolves to the Blob. Browser only.
+
+## saveBlob
+
+```ts
+function saveBlob(blob: Blob, fileName: string): void
+```
+
+Saves a Blob through a temporary `<a download>` link. The object URL is revoked 10 seconds after the click. Browser only.
+
+## pptx
+
+```ts
+function pptx(presentation: Component, props?: MaybeRefOrGetter<Props | undefined>): PptxInstance
+```
+
+Mounts the deck in a Vue app of its own and returns an instance. Reactive `props` re-render the tree; call `unmount()` when you're done.
+
+### PptxInstance
+
+| method                             | resolves to                                                                                     |
+| ---------------------------------- | ----------------------------------------------------------------------------------------------- |
+| `toModel()`                        | `Promise<DeckModel>`: frames in inches and PptxGenJS options.                                   |
+| `toBlob(options?: WriteOptions)`   | `Promise<Blob>`. Calls the `<Presentation>`'s `onRender({ blob })`.                             |
+| `toBuffer(options?: WriteOptions)` | `Promise<Uint8Array>`.                                                                          |
+| `toBase64(options?: WriteOptions)` | `Promise<string>`.                                                                              |
+| `toPptxGenJS()`                    | `Promise<PptxGenJS>`: the presentation object, built but not written.                           |
+| `onChange(listener: () => void)`   | `() => void`: calls `listener` after every change to the tree; returns an unsubscribe function. |
+| `unmount()`                        | `void`. Unmounts the app; later `to*()` calls reject.                                           |
+
+## writeModel
+
+```ts
+function writeModel(
+  model: DeckModel,
+  outputType: OutputType,
+  options?: WriteOptions,
+): Promise<string | ArrayBuffer | Blob | Uint8Array>
+```
+
+Builds a PptxGenJS presentation from a model and writes it. `outputType` is one of `'blob'`, `'arraybuffer'`, `'uint8array'`, `'base64'` and `'nodebuffer'`; the result has that type. Use it to save a model from `parsePptx()` or `renderToModel()`.
+
+## toPptxGenJS
+
+```ts
+function toPptxGenJS(model: DeckModel): Promise<PptxGenJS>
+```
+
+Builds the PptxGenJS presentation for a model without writing it, so you can add to it with PptxGenJS's own API and call `write()` or `writeFile()` yourself. PptxGenJS is loaded on the first call.
+
+## WriteOptions
+
+| option        | type      | default |                                                    |
+| ------------- | --------- | ------- | -------------------------------------------------- |
+| `compression` | `boolean` | `true`  | Deflate the zip. Off: faster writes, larger files. |
+
+## PPTX_MIME
+
+```ts
+const PPTX_MIME = 'application/vnd.openxmlformats-officedocument.presentationml.presentation'
+```
+
+## LAYOUTS
+
+PptxGenJS's built-in slide sizes, in inches:
+
+```ts
+const LAYOUTS = {
+  '16x9': { name: 'LAYOUT_16x9', width: 10, height: 5.625 },
+  '16x10': { name: 'LAYOUT_16x10', width: 10, height: 6.25 },
+  '4x3': { name: 'LAYOUT_4x3', width: 10, height: 7.5 },
+  wide: { name: 'LAYOUT_WIDE', width: 13.333, height: 7.5 },
+}
+```
+
+`LayoutName` is `keyof typeof LAYOUTS`.
+
+## toInches
+
+```ts
+function toInches(value: unknown, base?: number): number | undefined
+```
+
+Converts a [length](/guides/layout#units) to inches. Percentages are of `base` (default `0`). Returns `undefined` for anything that isn't a length, such as `'auto'`.
+
+```ts
+toInches('2.54cm') // 1
+toInches('72pt') // 1
+toInches('50%', 10) // 5
+```
+
+## toHex
+
+```ts
+function toHex(value: unknown): string | undefined
+```
+
+Normalizes a CSS-style color to the six-digit uppercase hex PptxGenJS writes: `#f35815` and `f35815` become `F35815`, `#fff` becomes `FFFFFF`, an eight-digit hex drops its alpha, and a few CSS names (`white`, `black`, `red`, `gray`, ...) map to their hex. Theme colors (`accent1` to `accent6`, `tx1`, `tx2`, `bg1`, `bg2`) and unrecognized strings pass through. Non-strings give `undefined`.
+
+## resolve
+
+```ts
+function resolve(tree: TreeNode): Promise<DeckModel>
+```
+
+The step between the Vue tree and the model: it takes a plain snapshot of the rendered nodes (`{ type, props, children }`, with types such as `PRESENTATION` and `SLIDE`) and computes every frame, flex layouts included. `toModel()` and `renderToModel()` call it for you; the snapshot type isn't exported, so use those instead unless you build the node tree yourself.

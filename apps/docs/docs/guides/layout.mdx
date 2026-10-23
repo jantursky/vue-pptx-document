@@ -1,0 +1,123 @@
+---
+title: Layout
+description: Absolute positions in inches, units and percentages, and flexbox with Yoga.
+---
+
+Every object on a slide ends up with a frame: `x`, `y`, `w` and `h` in inches, which is what PptxGenJS writes. You can set those yourself, or let flexbox compute them.
+
+## Absolute positions
+
+By default a slide places its children absolutely. Each object reads `x`, `y`, `w` and `h`:
+
+```vue
+<Slide>
+  <Shape type="rect" :x="0.5" :y="1.4" :w="2.1" :h="2.4" fill="#FFFFFF" :line="{ color: '#C1C1C1', width: 1 }" />
+  <Text :x="0.7" :y="1.55" :w="1.8" :h="2.1" :font-size="14" valign="top">A card</Text>
+</Slide>
+```
+
+When a value is missing:
+
+| prop | default                                                                                                                                                            |
+| ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `x`  | `0`                                                                                                                                                                |
+| `y`  | `0`                                                                                                                                                                |
+| `w`  | The rest of the parent's width (`width - x`). A `<Table>` with an array `col-w` takes the sum of its columns.                                                      |
+| `h`  | `<Text>`, and a `<Shape>` with text, are measured to fit their text. A `<Table>` gets one row height per row. Anything else fills the rest of the parent's height. |
+
+The measured height is an estimate: it uses a 2D canvas in the browser and average glyph widths in Node. Set `h` when the exact box matters.
+
+## Units
+
+A length is a number or a string:
+
+| value               | means                                                                        |
+| ------------------- | ---------------------------------------------------------------------------- |
+| `2`, `'2'`, `'2in'` | inches                                                                       |
+| `'5cm'`, `'50mm'`   | centimeters, millimeters                                                     |
+| `'72pt'`            | points, 72 per inch                                                          |
+| `'96px'`            | CSS pixels, 96 per inch                                                      |
+| `'914400emu'`       | English Metric Units, 914,400 per inch                                       |
+| `'50%'`             | a share of the parent: its width for `x` and `w`, its height for `y` and `h` |
+
+```vue
+<Text x="5%" y="10%" w="90%" h="1.5cm" :font-size="28">Units mix freely</Text>
+```
+
+`toInches(value, base?)` is the conversion the library uses, exported if you need it in your own code. Font sizes (`font-size`), line widths and text margins stay in points, as in PowerPoint and PptxGenJS.
+
+The slide size comes from `<Presentation layout>`:
+
+| `layout`             | size in inches                      |
+| -------------------- | ----------------------------------- |
+| `16x9` (the default) | 10 × 5.625                          |
+| `16x10`              | 10 × 6.25                           |
+| `4x3`                | 10 × 7.5                            |
+| `wide`               | 13.333 × 7.5                        |
+| `{ width, height }`  | custom, with any of the units above |
+
+The `LAYOUTS` export holds these sizes, which helps when positions depend on the slide size:
+
+```ts
+import { LAYOUTS } from 'vue-pptx-document'
+
+const { width, height } = LAYOUTS.wide // 13.333, 7.5
+```
+
+## Flexbox
+
+A `<View>` lays out its children with [Yoga](https://www.yogalayout.dev), the flexbox engine React Native uses. So does a slide with `layout="flex"`. The layout is set through the `style` prop:
+
+```vue
+<Slide layout="flex" :style="{ padding: 0.5, gap: 0.3 }">
+  <Text :font-size="24" bold valign="top">Flexbox with Yoga</Text>
+  <View :style="{ flexDirection: 'row', flexGrow: 1, gap: 0.2 }">
+    <View
+      v-for="card in cards"
+      :key="card"
+      fill="#FFFFFF"
+      :line="{ color: '#C1C1C1', width: 1 }"
+      :style="{ flex: 1, flexDirection: 'row' }"
+    >
+      <Shape type="rect" fill="#F35815" :style="{ width: 0.06 }" />
+      <Text :font-size="14" valign="top" :style="{ flex: 1 }">{{ card }}</Text>
+    </View>
+  </View>
+</Slide>
+```
+
+How it works:
+
+- A flex slide fills the slide; its children stack as a column, as in Yoga and React Native.
+- A `<View>` placed on an absolute slide uses its own `x`, `y`, `w` and `h` as the box, then lays out its children inside it with flexbox.
+- Lengths in `style` work like `x` and `w`: numbers are inches, strings take a unit, and percentages are left to Yoga, so they resolve against the parent box.
+- `w` and `h` set `width` and `height` when the style doesn't.
+- `flex: 1` means what it does in CSS: grow and shrink from a zero basis.
+- A child without a size gets one from its content: text is measured, a table gets one row height per row, a chart defaults to at most 4 × 3 inches and media to at most 4 × 2.25 inches.
+- `display: 'none'` in `style` removes an object and everything inside it, in flex layouts and on absolute slides alike. Use `v-if` when the object shouldn't exist at all.
+- Style keys may be written in kebab case (`'flex-direction'`); they're camelized.
+
+The supported style keys are listed under [FlexStyle](/reference/types#flexstyle): `display`, `position`, `flexDirection`, `flexWrap`, `flex`, `flexGrow`, `flexShrink`, `flexBasis`, `justifyContent`, `alignItems`, `alignSelf`, `alignContent`, `width`, `height`, the `min`/`max` sizes, `aspectRatio`, `gap`, `rowGap`, `columnGap`, `padding*`, `margin*` (including `Horizontal` and `Vertical`), and `top`, `right`, `bottom`, `left`.
+
+### A View's own background
+
+A `<View>` draws nothing by default. With `fill` or `line` it draws a rectangle behind its children, and with `rect-radius` a rounded one; `shadow` applies to that rectangle.
+
+### Absolute children inside flex
+
+A child with `position: 'absolute'` leaves the flow. Its `x` and `y` act as `left` and `top`, relative to its flex parent:
+
+```vue
+<View :x="0.5" :y="1" :w="9" :h="3" fill="#FFFFFF" :style="{ padding: 0.2 }">
+  <Text :font-size="14">In the flow</Text>
+  <Text :x="7.5" :y="0.1" :w="1.3" :h="0.4" :font-size="10" color="#737373" :style="{ position: 'absolute' }">
+    Pinned
+  </Text>
+</View>
+```
+
+### The output is absolute
+
+Flexbox only runs while the deck is resolved. The `.pptx` contains ordinary absolutely positioned objects, with no groups, so a flex layout opens in PowerPoint as separate boxes you can move. `renderToModel()` shows the frames it computed, and [modelToVue](/guides/import#from-a-model) turns them back into an absolute component.
+
+Yoga ships as WebAssembly and loads on the first flex layout. A deck that only uses absolute positions never fetches it.

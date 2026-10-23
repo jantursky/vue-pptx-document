@@ -1,0 +1,103 @@
+{
+  "name": "vue-pptx-document",
+  "version": "1.0.0",
+  "description": "Create PowerPoint files with Vue 3 components: a custom Vue renderer on top of PptxGenJS, with absolute or flexbox (Yoga) layout and a live HTML preview.",
+  "license": "MIT",
+  "author": {
+    "name": "Jan Tursky",
+    "email": "jan.tursky@gmail.com",
+    "url": "https://jantursky.com"
+  },
+  "homepage": "https://vue-pptx-document-docs.vercel.app",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jantursky/vue-pptx-document.git",
+    "directory": "packages/vue-pptx-document"
+  },
+  "bugs": {
+    "url": "https://github.com/jantursky/vue-pptx-document/issues"
+  },
+  "type": "module",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./import": {
+      "types": "./dist/import.d.ts",
+      "default": "./dist/import.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "bin": {
+    "vue-pptx-document": "./dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE"
+  ],
+  "sideEffects": false,
+  "engines": {
+    "node": ">=20.19"
+  },
+  "keywords": [
+    "vue",
+    "vue3",
+    "pptx",
+    "powerpoint",
+    "pptxgenjs",
+    "slides",
+    "presentation",
+    "renderer",
+    "yoga",
+    "flexbox"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "vite build && size-limit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "vue-tsc --noEmit -p tsconfig.json",
+    "test:coverage": "vitest run --coverage",
+    "test:browser": "vitest run --config vitest.browser.config.ts",
+    "lint:package": "publint --strict && attw --pack . --profile esm-only",
+    "prepublishOnly": "bun run typecheck && bun run test && bun run test:browser && bun run build && bun run lint:package && bun run test:pack",
+    "test:pack": "node scripts/pack-test.js",
+    "size": "size-limit"
+  },
+  "dependencies": {
+    "fast-xml-parser": "^5.3.0",
+    "jszip": "^3.10.1",
+    "pptxgenjs": "^4.0.1",
+    "yoga-layout": "^3.2.1"
+  },
+  "peerDependencies": {
+    "vue": "^3.5.0"
+  },
+  "devDependencies": {
+    "@arethetypeswrong/cli": "^0.18.5",
+    "@microsoft/api-extractor": "^7.59.4",
+    "@size-limit/esbuild": "^14",
+    "@size-limit/file": "^14",
+    "@types/node": "^22",
+    "@vitejs/plugin-vue": "^6",
+    "@vitest/browser-playwright": "5.0.5",
+    "@vitest/coverage-v8": "5.0.5",
+    "@vue/test-utils": "^2",
+    "happy-dom": "^21.0.4",
+    "playwright": "^1.64.1",
+    "publint": "^0.3.25",
+    "size-limit": "^14",
+    "typescript": "~5.9.3",
+    "vite": "^8",
+    "vite-plugin-dts": "^5",
+    "vitest": "^5",
+    "vue": "^3.5.0",
+    "vue-tsc": "^3"
+  }
+}

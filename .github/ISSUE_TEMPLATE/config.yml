@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Bug in PptxGenJS
+    url: https://github.com/gitbrent/PptxGenJS/issues
+    about: If PptxGenJS on its own writes the same broken file, it belongs upstream.
+  - name: Documentation
+    url: https://vue-pptx-document-docs.vercel.app
+    about: Guides, examples and the API reference.

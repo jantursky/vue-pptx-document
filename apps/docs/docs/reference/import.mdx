@@ -1,0 +1,91 @@
+---
+title: Import
+description: pptxToVue, parsePptx, modelToVue and literal from vue-pptx-document/import, and the CLI.
+---
+
+These come from the `vue-pptx-document/import` entry point. See [Import and codegen](/guides/import) for what the importer reads.
+
+## pptxToVue
+
+```ts
+function pptxToVue(input: PptxInput, options?: ParseOptions & CodegenOptions): Promise<PptxToVueResult>
+```
+
+Reads a `.pptx` file and writes a Vue component that renders the same slides.
+
+### PptxToVueResult
+
+| field      | type        |                                                                  |
+| ---------- | ----------- | ---------------------------------------------------------------- |
+| `code`     | `string`    | The Vue single-file component.                                   |
+| `model`    | `DeckModel` | The parsed slides, ready for `<SlidePreview>` or `writeModel()`. |
+| `warnings` | `string[]`  | What the importer skipped or approximated.                       |
+
+## parsePptx
+
+```ts
+function parsePptx(input: PptxInput, options?: ParseOptions): Promise<ParseResult>
+```
+
+Reads a `.pptx` file into a `DeckModel`. Throws `Not a PowerPoint file: ppt/presentation.xml is missing.` for a zip that isn't a presentation.
+
+### PptxInput
+
+```ts
+type PptxInput = ArrayBuffer | Uint8Array | Blob
+```
+
+A `File` is a `Blob`, and Node's `Buffer` is a `Uint8Array`.
+
+### ParseOptions
+
+| option         | type      | default |                                                                                |
+| -------------- | --------- | ------- | ------------------------------------------------------------------------------ |
+| `masterShapes` | `boolean` | `true`  | Copy the shapes and pictures of each slide's layout and master onto the slide. |
+| `embedImages`  | `boolean` | `true`  | Embed pictures as data URIs. `false`: `media/<name>` paths.                    |
+
+### ParseResult
+
+| field      | type        |                                        |
+| ---------- | ----------- | -------------------------------------- |
+| `model`    | `DeckModel` | The slides. `masters` is always empty. |
+| `warnings` | `string[]`  | Each distinct message once.            |
+
+## modelToVue
+
+```ts
+function modelToVue(model: DeckModel, options?: CodegenOptions): string
+```
+
+Writes a Vue single-file component that renders a model with the library's components, with absolute positions. Works on any model, including one from `renderToModel()`.
+
+### CodegenOptions
+
+| option        | type     | default               |                                                                                 |
+| ------------- | -------- | --------------------- | ------------------------------------------------------------------------------- |
+| `importFrom`  | `string` | `'vue-pptx-document'` | The module the component imports from.                                          |
+| `inlineLimit` | `number` | `100`                 | Values longer than this many characters move to a constant in `<script setup>`. |
+
+## literal
+
+```ts
+function literal(value: unknown, indent?: string): string
+```
+
+Prints a value as a JavaScript literal with single-quoted strings, safe inside a double-quoted template attribute. Numbers are rounded to four decimals; short arrays and objects stay on one line.
+
+## CLI
+
+```sh
+npx vue-pptx-document import <file.pptx> [options]
+```
+
+| option             |                                                                       |
+| ------------------ | --------------------------------------------------------------------- |
+| `-o, --out <file>` | Write the component here. Default: print it to stdout.                |
+| `--no-images`      | Refer to pictures as `media/<name>` instead of embedding them.        |
+| `--no-master`      | Skip the shapes slides inherit from their layout and master.          |
+| `--from <module>`  | Import the components from this module. Default: `vue-pptx-document`. |
+| `-h, --help`       | Show the help.                                                        |
+
+Warnings are printed to stderr. The exit code is `1` for a missing file argument, an unknown command or an error, and `0` otherwise.

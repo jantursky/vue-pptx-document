@@ -1,0 +1,68 @@
+---
+title: Sections, notes and slide numbers
+description: Group slides into sections, add speaker notes, number slides, and set backgrounds and hidden slides.
+---
+
+## Sections
+
+`section` on a `<Slide>` puts it into a PowerPoint section of that name. The first slide with a new name starts the section, later slides with the same name join it:
+
+```vue
+<Slide master="BRAND" section="Overview">...</Slide>
+<Slide master="BRAND" section="Overview">...</Slide>
+<Slide master="BRAND" section="Details">...</Slide>
+```
+
+Sections show up in PowerPoint's slide sorter, where they can be collapsed and moved as a group. Keep the slides of a section next to each other; PowerPoint sections are contiguous.
+
+## Speaker notes
+
+Write notes with the `notes` prop, or with `<Notes>` anywhere on the slide, including inside a `<View>`. Several are joined in order:
+
+```vue
+<Slide notes="Keep this one short.">...</Slide>
+
+<Slide>
+  <Text :x="0.5" :y="0.4" :w="9" :h="0.6" :font-size="24" bold>Quarterly review</Text>
+  <Notes>
+    Welcome everyone.<Br />This deck was rendered from a Vue component.
+  </Notes>
+</Slide>
+```
+
+Notes are plain text: line breaks (`<Br>`, `<Paragraph>`, or `\n` in a string) are kept, formatting isn't. When a slide has both, the prop comes first and each `<Notes>` follows on its own line. `<Preview notes>` shows them under each slide.
+
+## Slide numbers
+
+`slide-number` on a `<Slide>` or a `<Master>` adds PowerPoint's slide number field:
+
+```vue
+<Slide slide-number>...</Slide>
+<Slide :slide-number="{ x: '90%', y: 5.2, w: 0.6, h: 0.3, fontSize: 10, color: '#737373', align: 'right' }">...</Slide>
+```
+
+`true` places it in the bottom right corner: 1 inch from the right edge, 0.45 inches from the bottom, 0.6 × 0.3 inches, 10 points, right-aligned. An object overrides any of those and takes run styles (`color`, `fontFace`, `fontSize`, `bold`, ...). Its `x`, `y`, `w` and `h` accept [lengths](/guides/layout#units); percentages are of the slide size.
+
+On a master, the number appears on every slide that uses it. A slide's own `slide-number` wins over its master's.
+
+## Backgrounds
+
+`background` on a `<Slide>` or a `<Master>` takes:
+
+- a color: `background="#FAFAFA"` or `background="accent1"`
+- an image: a value that starts with `data:`, `http:`, `https:`, `blob:`, `/`, `./` or `../`, or ends in `.png`, `.jpg`, `.jpeg`, `.gif`, `.svg` or `.webp`
+- an object: `{ color, transparency }` or `{ src }`
+
+A slide without a background shows its master's.
+
+## Default text color
+
+`color` on a `<Slide>` sets the text color of everything on it that doesn't set its own:
+
+```vue
+<Slide background="#111111" color="#FAFAFA">...</Slide>
+```
+
+## Hidden slides
+
+`<Slide hidden>` keeps the slide in the file but skips it in the slide show. The preview marks it with `data-hidden` on its `[data-pptx-slide]` element and still draws it.

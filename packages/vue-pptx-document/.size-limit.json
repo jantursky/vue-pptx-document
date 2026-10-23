@@ -1,0 +1,24 @@
+[
+  {
+    "name": "Library code (engines excluded)",
+    "path": "dist/index.js",
+    "ignore": ["vue", "pptxgenjs", "yoga-layout", "jszip", "fast-xml-parser"],
+    "gzip": true,
+    "limit": "24 kB"
+  },
+  {
+    "name": "With PptxGenJS and Yoga, which load on first use",
+    "path": "dist/index.js",
+    "import": "{ Presentation, Slide, Text, renderToBlob }",
+    "ignore": ["vue"],
+    "gzip": true,
+    "limit": "200 kB"
+  },
+  {
+    "name": "The .pptx importer",
+    "path": "dist/import.js",
+    "ignore": ["vue"],
+    "gzip": true,
+    "limit": "70 kB"
+  }
+]

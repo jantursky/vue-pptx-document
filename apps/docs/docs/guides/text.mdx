@@ -1,0 +1,177 @@
+---
+title: Text and styling
+description: Text boxes, paragraphs, runs, bullets, numbering, links, colors, shapes and images.
+---
+
+## Text boxes
+
+`<Text>` is one PowerPoint text box. Its props style the whole box, and its content can be plain text or a mix of `<Paragraph>`, `<Run>` and `<Br>`:
+
+```vue
+<Text :x="0.5" :y="1.1" :w="9" :h="3.6" :font-size="16" valign="top" :para-space-after="8">
+  <Paragraph bullet>Shipped <Run bold>{{ done }}</Run> projects this quarter</Paragraph>
+  <Paragraph bullet>
+    <Run color="#F35815" bold>{{ atRisk }} at risk</Run>, with owners named in the table
+  </Paragraph>
+  <Paragraph :bullet="{ type: 'number' }" :indent-level="1">Review scope in week one</Paragraph>
+  <Paragraph :bullet="{ type: 'number' }" :indent-level="1">Re-plan by week three</Paragraph>
+</Text>
+```
+
+| element       | what it is                                                                                        |
+| ------------- | ------------------------------------------------------------------------------------------------- |
+| `<Text>`      | A text box. Takes position, box options (fill, line, margin, valign, ...) and default run styles. |
+| `<Paragraph>` | A paragraph. Its props apply to each run inside it, and it ends with a line break.                |
+| `<Run>`       | A span of text with its own formatting. Runs nest, and inner props win.                           |
+| `<Br>`        | A line break.                                                                                     |
+
+Whitespace a template leaves at the start and end of each paragraph is trimmed. A `\n` inside an interpolated string, such as `{{ 'one\ntwo' }}`, starts a new line.
+
+Plain text is only kept inside `<Text>`, `<Paragraph>`, `<Run>`, `<Shape>`, `<TableCell>`, `<Notes>` and `<Placeholder>`. Text anywhere else is dropped with a console warning.
+
+### Run styles
+
+These work on `<Text>`, `<Paragraph>`, `<Run>`, `<Shape>` and table cells:
+
+| prop                       |                                                                       |
+| -------------------------- | --------------------------------------------------------------------- |
+| `bold`, `italic`           | Flags: `<Run bold>` is enough.                                        |
+| `underline`                | `true`, or PptxGenJS's `{ style, color }`.                            |
+| `strike`                   | `true`, `'sngStrike'` or `'dblStrike'`.                               |
+| `subscript`, `superscript` | Flags.                                                                |
+| `color`, `highlight`       | A color, see [Colors](#colors).                                       |
+| `font-face`                | A font name, such as `Arial`. It must exist where the deck is opened. |
+| `font-size`                | Points. PowerPoint's default is 18.                                   |
+| `char-spacing`             | Points between characters.                                            |
+| `transparency`             | 0 to 100.                                                             |
+| `href`, `hyperlink`        | A link, see [Links](#links).                                          |
+| `lang`                     | A language tag, such as `en-US`.                                      |
+
+### Paragraph styles
+
+These work on `<Text>` and `<Paragraph>`:
+
+| prop                                    |                                                    |
+| --------------------------------------- | -------------------------------------------------- |
+| `align`                                 | `left`, `center`, `right` or `justify`.            |
+| `bullet`                                | `true`, or an options object, see below.           |
+| `indent-level`                          | Nesting level of a bulleted or numbered paragraph. |
+| `para-space-before`, `para-space-after` | Points.                                            |
+| `line-spacing`                          | Points.                                            |
+| `line-spacing-multiple`                 | A factor, such as `1.2`.                           |
+| `rtl-mode`                              | Right-to-left text.                                |
+
+### Box options
+
+These only apply to `<Text>` (and to `<Shape>` with text):
+
+| prop                        |                                                                                                          |
+| --------------------------- | -------------------------------------------------------------------------------------------------------- |
+| `valign`                    | `top`, `middle` or `bottom`. PptxGenJS centers text vertically by default.                               |
+| `fill`, `line`              | A color, or PptxGenJS's fill and line objects (`{ color, transparency }`, `{ color, width, dashType }`). |
+| `margin`                    | Inset in points: one number, or `[top, right, bottom, left]` as in CSS.                                  |
+| `fit`                       | `none`, `shrink` or `resize`, PowerPoint's autofit setting.                                              |
+| `wrap`                      | `:wrap="false"` keeps each paragraph on one line.                                                        |
+| `rotate`                    | Degrees.                                                                                                 |
+| `shadow`, `glow`, `outline` | PptxGenJS's shadow and glow options; `outline` is `{ color, size }`.                                     |
+| `shape`, `rect-radius`      | Draw the box as a preset shape, such as `roundRect`.                                                     |
+| `vert`                      | Vertical text, such as `vert270`.                                                                        |
+| `placeholder`               | Put this text into a master's placeholder. See [Masters](/guides/masters).                               |
+
+Any other prop goes to PptxGenJS's `addText` options as written.
+
+## Bullets and numbering
+
+`bullet` on a `<Paragraph>` (or on the whole `<Text>`) takes PptxGenJS's bullet options:
+
+```vue
+<Text :x="0.5" :y="1" :w="9" :h="3" valign="top">
+  <Paragraph bullet>A round bullet</Paragraph>
+  <Paragraph :bullet="{ code: '2013' }">A dash, by Unicode code point</Paragraph>
+  <Paragraph :bullet="{ type: 'number' }">One</Paragraph>
+  <Paragraph :bullet="{ type: 'number' }">Two</Paragraph>
+  <Paragraph :bullet="{ type: 'number', numberType: 'alphaLcPeriod' }" :indent-level="1">A nested letter</Paragraph>
+</Text>
+```
+
+## Links
+
+`href` is a shorthand for `hyperlink: { url }`. For a tooltip or a link to another slide, pass `hyperlink` itself:
+
+```vue
+<Text :x="0.5" :y="4.6" :w="9" :h="0.4" :font-size="12">
+  Read the notes on <Run href="https://github.com/jantursky/vue-pptx-document">GitHub</Run>,
+  or jump to the <Run :hyperlink="{ slide: 3, tooltip: 'Status by team' }">status table</Run>.
+</Text>
+```
+
+`<Shape>` and `<Image>` take `hyperlink` too, which makes the whole object a link.
+
+## Colors
+
+Colors are written as in CSS and normalized to the six-digit hex PptxGenJS writes:
+
+| value                                                | becomes                                              |
+| ---------------------------------------------------- | ---------------------------------------------------- |
+| `#F35815`, `F35815`                                  | `F35815`                                             |
+| `#fff`                                               | `FFFFFF`                                             |
+| `#F3581580`                                          | `F35815`. The alpha is dropped; use `transparency`.  |
+| `white`, `black`, `red`, `gray`, `navy`, `teal`, ... | their hex value. A short list of CSS names is known. |
+| `accent1` to `accent6`, `tx1`, `tx2`, `bg1`, `bg2`   | theme colors, passed through unchanged.              |
+
+This applies to every prop named `color`, `highlight` or ending in `Color`, at any depth (`:line="{ color: '#ccc' }"`), and to `chart-colors`. `toHex()` is the same function, exported.
+
+A slide's `color` prop sets the default text color for that slide.
+
+## Fonts
+
+PowerPoint doesn't embed fonts. A run's `font-face` names a font the viewer's machine must have, so stick to fonts that ship with Office (Arial, Calibri, Segoe UI, Georgia, ...) for decks you share. `<Presentation head-font-face="..." body-font-face="...">` sets the theme's heading and body fonts, which text without a `font-face` uses.
+
+## Shapes
+
+`<Shape>` draws one of PptxGenJS's preset shapes:
+
+```vue
+<Shape type="rect" :x="0" :y="0" :w="10" :h="0.12" fill="#111111" />
+<Shape
+  type="roundRect"
+  :x="1"
+  :y="1"
+  :w="3"
+  :h="1"
+  fill="#FFFFFF"
+  :line="{ color: '#C1C1C1', width: 1 }"
+  :rect-radius="0.2"
+/>
+<Shape type="line" :x="0.5" :y="5.15" :w="9" :h="0" :line="{ color: '#C1C1C1', width: 0.75 }" />
+<Shape type="rightArrow" :x="4" :y="2" :w="1.5" :h="0.6" fill="accent1" :rotate="15" />
+```
+
+`type` defaults to `rect`. The props are `fill`, `line`, `rect-radius`, `rotate`, `flip-h`, `flip-v`, `shadow` and `hyperlink`; others go to `addShape` unchanged. A `<Shape>` with text inside becomes a text box drawn as that shape, and takes the text props above.
+
+## Images
+
+```vue
+<Image
+  src="/logo.png"
+  :x="8.3"
+  :y="0.45"
+  :w="1.2"
+  :h="0.6"
+  :sizing="{ type: 'contain', w: 1.2, h: 0.6 }"
+  alt-text="Company logo"
+/>
+```
+
+`src` is a URL, a data URI or, in Node, a file path. In the browser PptxGenJS fetches URLs, so they must be same-origin or allow cross-origin requests. A data URI avoids the request. `sizing` (`contain`, `cover` or `crop`), `rounding`, `rotate`, `flip-h`, `flip-v`, `transparency` and `hyperlink` work as in PptxGenJS.
+
+## Video and audio
+
+`<Media>` embeds a file, or links an online video:
+
+```vue
+<Media type="video" src="/clip.mp4" :x="1" :y="1" :w="6" :h="3.375" :cover="posterDataUri" />
+<Media type="online" src="https://www.youtube.com/embed/..." :x="1" :y="1" :w="6" :h="3.375" />
+```
+
+`type` is `video` (the default), `audio` or `online`. `cover` is a poster image as a data URI.

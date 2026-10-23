@@ -1,0 +1,236 @@
+---
+title: Components
+description: Props of every primitive, and of Preview, SlidePreview and PptxDownloadButton.
+---
+
+## How props work
+
+Each primitive renders one node of the slide tree. Its props go through as written, camelized, so `font-size` and `fontSize` are the same prop. What the tables below list is read by the library; any other prop goes to the matching PptxGenJS call (`addText`, `addShape`, `addImage`, `addTable`, `addChart`, `addMedia`) unchanged.
+
+Boolean props that a template may write as bare attributes, such as `<Text bold>`, are declared so Vue casts them: `bold`, `italic`, `underline`, `strike`, `subscript`, `superscript`, `rtl-mode` and `bullet` on text elements, `wrap` on `Text` and `Placeholder`, `hidden` and `slide-number` on `Slide`, `slide-number` on `Master`, `rtl` on `Presentation`, `rounding`, `flip-h` and `flip-v` on `Image` (and the flips on `Shape`), `auto-page` and `auto-page-repeat-header` on `Table`, and the chart flags listed under [Chart](#chart).
+
+Lengths (`x`, `y`, `w`, `h`, `col-w`, `row-h` and style lengths) are inches as numbers, or strings with `in`, `cm`, `mm`, `pt`, `px`, `emu` or `%`. See [Layout](/guides/layout#units).
+
+## Presentation
+
+The root of every deck.
+
+| prop                                    |                                                                                                    |
+| --------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| `layout`                                | `16x9` (default, 10 × 5.625 in), `16x10`, `4x3`, `wide` (13.333 × 7.5 in), or `{ width, height }`. |
+| `title`, `author`, `company`, `subject` | File metadata.                                                                                     |
+| `revision`                              | A string or number.                                                                                |
+| `rtl`                                   | Right-to-left presentation.                                                                        |
+| `head-font-face`, `body-font-face`      | Theme fonts.                                                                                       |
+| `theme`                                 | PptxGenJS `ThemeProps` (`{ headFontFace, bodyFontFace }`); the two props above win.                |
+| `on-render`                             | `({ blob }) => void`, called after each `toBlob()` render.                                         |
+
+Children: `Slide` and `Master`.
+
+## Slide
+
+| prop           |                                                                                |
+| -------------- | ------------------------------------------------------------------------------ |
+| `background`   | A color, an image URL or data URI, or `{ color, transparency, src }`.          |
+| `color`        | Default text color.                                                            |
+| `hidden`       | Skip the slide in the slide show.                                              |
+| `master`       | The `name` of a `Master`.                                                      |
+| `section`      | Start or continue a section with this title.                                   |
+| `notes`        | Speaker notes. `Notes` children work too.                                      |
+| `slide-number` | `true`, or `{ x, y, w, h, align, ...run styles }`.                             |
+| `layout`       | `absolute` (default) or `flex`.                                                |
+| `style`        | [FlexStyle](/reference/types#flexstyle) of the slide box, for `layout="flex"`. |
+
+Children: `Text`, `Shape`, `Image`, `Table`, `Chart`, `Media`, `Placeholder`, `View` and `Notes`.
+
+## Master
+
+| prop              |                                                               |
+| ----------------- | ------------------------------------------------------------- |
+| `name`            | Required in practice; defaults to `MASTER_1`, `MASTER_2`, ... |
+| `background`      | As on `Slide`.                                                |
+| `margin`          | PptxGenJS `Margin`.                                           |
+| `slide-number`    | As on `Slide`.                                                |
+| `layout`, `style` | As on `Slide`.                                                |
+
+Holds text, images, single-type charts, placeholders, and `rect` and `line` shapes. See [Masters](/guides/masters#what-a-master-can-hold).
+
+## Placeholder
+
+A placeholder on a master. Takes every `Text` prop, plus:
+
+| prop   |                                                              |
+| ------ | ------------------------------------------------------------ |
+| `name` | Required. Slides fill it with `<Text placeholder="name">`.   |
+| `type` | `title`, `body` (default), `pic`, `chart`, `tbl` or `media`. |
+
+Its text content is the prompt shown in an empty placeholder.
+
+## View
+
+A flex container. Its children are laid out with Yoga inside its box.
+
+| prop               |                                             |
+| ------------------ | ------------------------------------------- |
+| `x`, `y`, `w`, `h` | Its box, when it sits on an absolute slide. |
+| `style`            | [FlexStyle](/reference/types#flexstyle).    |
+| `fill`, `line`     | Draw a rectangle behind the children.       |
+| `rect-radius`      | Round that rectangle's corners.             |
+| `shadow`           | A shadow on that rectangle.                 |
+
+## Text
+
+A text box. Content: strings, `Paragraph`, `Run` and `Br`.
+
+| prop group | props                                                                                                                                                                                                                      |
+| ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| position   | `x`, `y`, `w`, `h`, `style`                                                                                                                                                                                                |
+| run styles | `bold`, `italic`, `underline`, `strike`, `subscript`, `superscript`, `color`, `highlight`, `font-face`, `font-size` (pt), `char-spacing`, `transparency`, `href`, `hyperlink`, `lang`                                      |
+| paragraph  | `align`, `bullet`, `indent-level`, `para-space-before` (pt), `para-space-after` (pt), `line-spacing` (pt), `line-spacing-multiple`, `rtl-mode`                                                                             |
+| box        | `valign`, `fill`, `line`, `margin` (pt, one number or `[top, right, bottom, left]`), `fit` (`none`, `shrink`, `resize`), `wrap`, `rotate`, `shadow`, `glow`, `outline` (`{ color, size }`), `shape`, `rect-radius`, `vert` |
+| master     | `placeholder`: the name of a master placeholder to fill                                                                                                                                                                    |
+
+Without `h`, the box is measured to fit its text.
+
+## Paragraph
+
+Takes run styles and paragraph styles (see `Text`). They apply to every run inside. Ends with a line break.
+
+## Run
+
+Takes run styles. Runs nest; inner props win.
+
+## Br
+
+A line break. No props.
+
+## Shape
+
+| prop                         |                                                                                                         |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------- |
+| `type`                       | A PptxGenJS shape name: `rect` (default), `roundRect`, `ellipse`, `line`, `triangle`, `rightArrow`, ... |
+| `x`, `y`, `w`, `h`, `style`  | Position.                                                                                               |
+| `fill`, `line`               | A color, or `ShapeFillProps` / `ShapeLineProps`.                                                        |
+| `rect-radius`                | Corner radius of `roundRect`.                                                                           |
+| `rotate`, `flip-h`, `flip-v` | Transform.                                                                                              |
+| `shadow`, `hyperlink`        | As in PptxGenJS.                                                                                        |
+
+A `Shape` with text content is written as a text box drawn as that shape, and takes the `Text` props.
+
+## Image
+
+| prop                                                      |                                                             |
+| --------------------------------------------------------- | ----------------------------------------------------------- |
+| `src`                                                     | Required. A URL, a data URI or, in Node, a file path.       |
+| `x`, `y`, `w`, `h`, `style`                               | Position.                                                   |
+| `alt-text`                                                | Alternative text.                                           |
+| `sizing`                                                  | `{ type, w, h }`, with `type` `contain`, `cover` or `crop`. |
+| `rounding`                                                | Crop to an ellipse.                                         |
+| `rotate`, `flip-h`, `flip-v`, `transparency`, `hyperlink` | As in PptxGenJS.                                            |
+
+## Table
+
+| prop                                                            |                                                                  |
+| --------------------------------------------------------------- | ---------------------------------------------------------------- |
+| `rows`                                                          | `TableCellValue[][]`. When set, `TableRow` children are ignored. |
+| `col-w`, `row-h`                                                | One length, or one per column / row.                             |
+| `font-size`, `font-face`, `color`, `fill`, `align`, `valign`    | Defaults for every cell.                                         |
+| `border`                                                        | `BorderProps`, or four of them (top, right, bottom, left).       |
+| `margin`                                                        | Cell margin in inches.                                           |
+| `auto-page`, `auto-page-repeat-header`, `auto-page-header-rows` | PptxGenJS paging.                                                |
+| run styles                                                      | `bold`, `italic`, ... for every cell.                            |
+
+Children: `TableRow`. See [Tables](/guides/tables).
+
+## TableRow
+
+Takes cell props, which apply to each of its cells. Children: `TableCell`.
+
+## TableCell
+
+| prop                                 |                                                                   |
+| ------------------------------------ | ----------------------------------------------------------------- |
+| `colspan`, `rowspan`                 | Merge cells.                                                      |
+| `fill`, `border`, `valign`, `margin` | Cell styling. `margin` is `[top, right, bottom, left]` in inches. |
+| run and paragraph styles             | As on `Text`.                                                     |
+
+Content: strings, `Run`, `Paragraph` and `Br`.
+
+## Chart
+
+| prop                         |                                                                                                                                      |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `type`                       | Required. `area`, `bar`, `bar3D`, `bubble`, `bubble3D`, `doughnut`, `line`, `pie`, `radar`, `scatter` (any case), or `ComboChart[]`. |
+| `data`                       | `ChartSeries[]`. Ignored for combo charts.                                                                                           |
+| `x`, `y`, `w`, `h`, `style`  | Position.                                                                                                                            |
+| `title`, `show-title`        | Chart title.                                                                                                                         |
+| `show-legend`, `legend-pos`  | `legend-pos`: `b`, `l`, `r`, `t` or `tr`.                                                                                            |
+| `show-value`, `show-percent` | Data labels.                                                                                                                         |
+| `chart-colors`               | Series colors.                                                                                                                       |
+| `bar-dir`, `bar-grouping`    | `bar` or `col`; `clustered`, `stacked`, `percentStacked` or `standard`.                                                              |
+
+Any other PptxGenJS chart option works as a prop. These are declared as flags: `show-title`, `show-legend`, `show-value`, `show-percent`, `show-label`, `show-val-axis-title`, `show-cat-axis-title`, `cat-axis-hidden`, `val-axis-hidden`, `show-leader-lines`, `show-ser-name`, `show-data-table`. See [Charts](/guides/charts).
+
+## Media
+
+| prop                        |                                                         |
+| --------------------------- | ------------------------------------------------------- |
+| `type`                      | `video` (default), `audio` or `online`.                 |
+| `src`                       | A URL or data URI; for `online`, the video's embed URL. |
+| `cover`                     | A poster image as a data URI.                           |
+| `extn`                      | The file extension, when `src` doesn't show it.         |
+| `x`, `y`, `w`, `h`, `style` | Position.                                               |
+
+## Notes
+
+Speaker notes for the slide it's on, directly or inside a `<View>`. Content: strings, `Br` and `Paragraph`. No props.
+
+## Preview
+
+Draws every slide as HTML and SVG and redraws after changes. See [Preview](/guides/preview).
+
+| prop             | default                  |                                                    |
+| ---------------- | ------------------------ | -------------------------------------------------- |
+| `document`       | required                 | The presentation component. Read once, on mount.   |
+| `document-props` | `undefined`              | Its props. A change redraws.                       |
+| `slide`          | `undefined`              | Show only this slide, zero-based.                  |
+| `notes`          | `false`                  | Show speaker notes under each slide.               |
+| `debounce`       | `50`                     | Milliseconds between the last change and a redraw. |
+| `label`          | `'Presentation preview'` | Accessible name.                                   |
+
+| slot      | props                     |                                        |
+| --------- | ------------------------- | -------------------------------------- |
+| `loading` |                           | Until the first model is ready.        |
+| `error`   | `{ error }`               | When resolving fails.                  |
+| `caption` | `{ index, total, model }` | Replaces the caption under each slide. |
+
+Renders `section[data-pptx-preview]` with one `figure[data-pptx-preview-slide]` per slide.
+
+## SlidePreview
+
+Draws one slide of a resolved model.
+
+| prop    |                                         |
+| ------- | --------------------------------------- |
+| `model` | Required. A `DeckModel`.                |
+| `index` | Required. Zero-based slide index.       |
+| `label` | Accessible name. Defaults to `Slide N`. |
+
+Renders `div[data-pptx-slide]` with `role="group"` and `aria-roledescription="slide"`, so its text stays readable to screen readers, full width and the slide's aspect ratio.
+
+## PptxDownloadButton
+
+A button that renders the deck on click and saves it.
+
+| prop             | default               |                             |
+| ---------------- | --------------------- | --------------------------- |
+| `document`       | required              | The presentation component. |
+| `document-props` | `undefined`           | Its props.                  |
+| `file-name`      | `'presentation.pptx'` | The saved file's name.      |
+
+| event   | payload   |
+| ------- | --------- |
+| `done`  | `Blob`    |
+| `error` | `unknown` |
+
+The default slot receives `{ loading, error }`. Renders `button[data-pptx-download]`, with `data-loading` and `aria-busy="true"` while it works.

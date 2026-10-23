@@ -1,0 +1,95 @@
+---
+title: Getting started
+description: Install vue-pptx-document, write a deck component, preview it and download the .pptx.
+sidebar:
+  order: 2
+---
+
+## Install
+
+```package-install
+vue-pptx-document
+```
+
+It needs Vue `^3.5` and Node 20.19 or newer for server use. The package is ESM only. It brings PptxGenJS 4 (with JSZip), `yoga-layout` for flexbox, and `fast-xml-parser` for the importer. PptxGenJS loads on the first write and Yoga on the first flex layout, both through `import()`, so a page that only previews slides never downloads the writer.
+
+## Write a deck
+
+A deck is an ordinary component whose template starts with `<Presentation>`. Every object takes `x`, `y`, `w` and `h`, in inches by default:
+
+```vue HelloDeck.vue
+<script setup lang="ts">
+import { Presentation, Shape, Slide, Text } from 'vue-pptx-document'
+
+defineProps<{ name: string }>()
+</script>
+
+<template>
+  <Presentation title="Hello" layout="16x9">
+    <Slide background="#FAFAFA">
+      <Shape type="rect" :x="0.6" :y="1.9" :w="0.06" :h="1.1" fill="#F35815" />
+      <Text :x="0.85" :y="1.8" :w="8.5" :h="0.8" :font-size="40" bold color="#000000" valign="top">
+        Hello, {{ name || 'world' }}
+      </Text>
+      <Text :x="0.85" :y="2.6" :w="8.5" :h="0.5" :font-size="18" color="#414141" valign="top">
+        A slide written as a Vue component.
+      </Text>
+    </Slide>
+  </Presentation>
+</template>
+```
+
+The `16x9` layout is 10 by 5.625 inches, PptxGenJS's default. Text boxes are vertically centered unless you set `valign`, as in PowerPoint.
+
+## Preview it and download it
+
+`<Preview>` draws the slides as HTML and SVG and redraws them when `document-props` change. `<PptxDownloadButton>` renders the deck when it's clicked and saves the file:
+
+```vue App.vue
+<script setup lang="ts">
+import { ref } from 'vue'
+import { PptxDownloadButton, Preview } from 'vue-pptx-document'
+
+import HelloDeck from './HelloDeck.vue'
+
+const name = ref('Ada')
+</script>
+
+<template>
+  <input v-model="name" />
+  <PptxDownloadButton :document="HelloDeck" :document-props="{ name }" file-name="hello.pptx" />
+  <Preview :document="HelloDeck" :document-props="{ name }" />
+</template>
+```
+
+The preview is an approximation of what PowerPoint shows; see [Preview](/guides/preview) for what it draws and what it doesn't.
+
+## Download from your own code
+
+In a click handler, `downloadPptx()` renders once and saves the file through a temporary link:
+
+```ts
+import { downloadPptx } from 'vue-pptx-document'
+
+import HelloDeck from './HelloDeck.vue'
+
+const blob = await downloadPptx(HelloDeck, { name: 'Ada' }, 'hello.pptx')
+```
+
+`renderToBlob()` gives you the `Blob` without saving it, and `usePptx()` keeps a Blob and an object URL current as reactive state changes. See [Composables and download](/guides/download).
+
+## Render in Node
+
+`renderToBuffer()` resolves to a `Uint8Array` and needs no DOM:
+
+```ts
+import { writeFile } from 'node:fs/promises'
+
+import { renderToBuffer } from 'vue-pptx-document'
+
+import HelloDeck from './HelloDeck.vue'
+
+await writeFile('hello.pptx', await renderToBuffer(HelloDeck, { name: 'Ada' }))
+```
+
+`.vue` files need a compiler in Node, such as Vite's SSR build, `vite-node` or Nuxt. [Server and Node](/guides/server) shows a plain-Node version with render functions and an HTTP endpoint.

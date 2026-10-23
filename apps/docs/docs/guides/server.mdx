@@ -1,0 +1,85 @@
+---
+title: Server and Node
+description: Render .pptx files in Node, in a Nuxt server route, in a script or in a worker.
+---
+
+`renderToBuffer()` resolves to a `Uint8Array` and needs no DOM, so it runs in Node 20.19 and newer, in workers and in a Nuxt or Vite SSR server.
+
+```ts server.ts
+import { createServer } from 'node:http'
+
+import { PPTX_MIME, renderToBuffer } from 'vue-pptx-document'
+
+import ReportDeck from './ReportDeck.vue'
+
+createServer(async (request, response) => {
+  const file = await renderToBuffer(ReportDeck, { quarter: 'Q3 2026', rows: [] })
+  response.writeHead(200, {
+    'content-type': PPTX_MIME,
+    'content-length': file.length,
+    'content-disposition': 'attachment; filename="report.pptx"',
+  })
+  response.end(file)
+}).listen(3000)
+```
+
+`.vue` files have to be compiled first, which Nuxt, Vite's SSR build or `vite-node` already do. In a plain Node script, write the deck with render functions:
+
+```ts deck.mjs
+import { writeFile } from 'node:fs/promises'
+
+import { h } from 'vue'
+import { Presentation, Slide, Text, renderToBuffer } from 'vue-pptx-document'
+
+const Hello = {
+  render: () =>
+    h(Presentation, { title: 'Hello' }, () =>
+      h(Slide, () => h(Text, { x: 0.5, y: 2, w: 9, h: 1, fontSize: 40, bold: true }, () => 'Hello from Node')),
+    ),
+}
+
+await writeFile('hello.pptx', await renderToBuffer(Hello))
+```
+
+In render functions, props are camelCase (`fontSize`) and flags are `true`.
+
+## Nuxt
+
+In a server route, return the bytes with the right headers:
+
+```ts server/api/report.get.ts
+import { PPTX_MIME, renderToBuffer } from 'vue-pptx-document'
+
+import ReportDeck from '~/components/ReportDeck.vue'
+
+export default defineEventHandler(async (event) => {
+  setHeader(event, 'content-type', PPTX_MIME)
+  setHeader(event, 'content-disposition', 'attachment; filename="report.pptx"')
+  return renderToBuffer(ReportDeck, { quarter: 'Q3 2026', rows: [] })
+})
+```
+
+In pages, `usePptx()` and `<Preview>` start on mount, so server rendering a page that contains them never runs the layout or PptxGenJS.
+
+## Images in Node
+
+In Node, an `<Image>` `src` may be a file path, which PptxGenJS reads from disk, besides a URL or a data URI. Paths resolve against the process's working directory.
+
+## Text measurement in Node
+
+Text without an `h`, and text in flex layouts, is measured to size its box. The browser measures with a canvas; Node, which has none, uses average glyph widths. A flex layout can therefore come out slightly different on the server than in the browser preview. Give text boxes a fixed `h` (or a `height` in `style`) where that matters.
+
+## In a worker
+
+`renderToBuffer()` also runs in a Web Worker, which keeps a long write off the main thread. Post the props in, and the bytes back as a transferable:
+
+```ts worker.ts
+import { renderToBuffer } from 'vue-pptx-document'
+
+import ReportDeck from './ReportDeck.vue'
+
+self.onmessage = async (event: MessageEvent) => {
+  const bytes = await renderToBuffer(ReportDeck, event.data)
+  self.postMessage(bytes, { transfer: [bytes.buffer] })
+}
+```

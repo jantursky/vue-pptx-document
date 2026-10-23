@@ -1,0 +1,68 @@
+---
+title: Composables
+description: usePptx and useSlides.
+---
+
+Both composables mount the deck in a Vue app of their own when the calling component mounts, follow reactive changes, and unmount it when the calling scope is disposed. Called outside a component, for example in an `effectScope`, they start right away.
+
+`props` may be a plain object, a ref or a getter (`MaybeRefOrGetter<Record<string, unknown> | undefined>`).
+
+## usePptx
+
+```ts
+function usePptx(
+  presentation: Component,
+  props?: MaybeRefOrGetter<Props | undefined>,
+  options?: UsePptxOptions,
+): UsePptxReturn
+```
+
+Renders the deck to a `.pptx` Blob and an object URL, and renders again after changes.
+
+### UsePptxOptions
+
+| option        | type      | default |                                                                      |
+| ------------- | --------- | ------- | -------------------------------------------------------------------- |
+| `debounce`    | `number`  | `300`   | Milliseconds to wait after a change before rendering again.          |
+| `auto`        | `boolean` | `true`  | Render on mount and after every change. `false`: only on `update()`. |
+| `compression` | `boolean` | `true`  | Deflate the zip.                                                     |
+
+### UsePptxReturn
+
+| field     | type                            |                                                              |
+| --------- | ------------------------------- | ------------------------------------------------------------ |
+| `blob`    | `Readonly<Ref<Blob \| null>>`   | The latest file.                                             |
+| `url`     | `Readonly<Ref<string \| null>>` | An object URL for `blob`.                                    |
+| `loading` | `Readonly<Ref<boolean>>`        | `true` while a render runs. Starts `true` when `auto` is on. |
+| `error`   | `Readonly<Ref<unknown>>`        | The last render's error, or `null`.                          |
+| `update`  | `() => Promise<Blob \| null>`   | Renders now. Resolves to the Blob, or `null` on failure.     |
+
+A replaced URL is revoked 10 seconds later, so a download still reading it can finish. All URLs are revoked when the scope is disposed. When renders overlap, only the newest one updates the refs.
+
+## useSlides
+
+```ts
+function useSlides(
+  presentation: Component,
+  props?: MaybeRefOrGetter<Props | undefined>,
+  options?: UseSlidesOptions,
+): UseSlidesReturn
+```
+
+Resolves the deck to its `DeckModel` and keeps it current, without writing a file or loading PptxGenJS. `<Preview>` runs it.
+
+### UseSlidesOptions
+
+| option     | type     | default |                                                             |
+| ---------- | -------- | ------- | ----------------------------------------------------------- |
+| `debounce` | `number` | `50`    | Milliseconds to wait after a change before resolving again. |
+
+### UseSlidesReturn
+
+| field      | type                               |                                                                                                       |
+| ---------- | ---------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `model`    | `Readonly<Ref<DeckModel \| null>>` | The resolved slides, as `<SlidePreview>` draws them.                                                  |
+| `loading`  | `Readonly<Ref<boolean>>`           | `true` until the first model, and while it updates.                                                   |
+| `error`    | `Readonly<Ref<unknown>>`           | The last error, or `null`.                                                                            |
+| `update`   | `() => Promise<void>`              | Resolves again now.                                                                                   |
+| `instance` | `() => PptxInstance \| undefined`  | The mounted presentation, for `toBlob()` and the other [instance methods](/reference/functions#pptx). |

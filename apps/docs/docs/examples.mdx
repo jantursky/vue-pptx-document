@@ -1,0 +1,52 @@
+---
+title: Examples
+description: A live preview, absolute and flex layout, every chart type, and a deck with a master, sections, notes and a table.
+sidebar:
+  order: 4
+---
+
+Each preview runs a page component that shows a deck component. Switch to the **Code** tab to read it. The same files run in the demo app under `apps/example/src/examples`, and every example has a download button that writes the real `.pptx`.
+
+## Minimal
+
+One slide and one prop. Type a name and the preview redraws.
+
+<Component path="MinimalExample" />
+
+Also in the demo: [Minimal](https://vue-pptx-document.vercel.app/#example-minimal).
+
+## Absolute and flex
+
+The same cards twice: on the first slide every object has `x`, `y`, `w` and `h`; on the second, a `<Slide layout="flex">` and nested `<View>`s let Yoga place them. Move the slider to add cards and switch the direction; only the flex slide reflows.
+
+<Component path="LayoutExample" />
+
+Also in the demo: [Absolute and flex](https://vue-pptx-document.vercel.app/#example-layout). The file is `LayoutDeck.vue`.
+
+## Charts
+
+One slide per chart type: clustered columns, stacked bars, 3D columns, lines, stacked area, pie, doughnut, scatter, bubbles, radar, and a combo of bars and a line on a secondary axis. All of them are native charts in the file.
+
+<Component path="ChartsExample" />
+
+Also in the demo: [Charts](https://vue-pptx-document.vercel.app/#example-charts). The file is `ChartsDeck.vue`.
+
+## Masters and tables
+
+A `<Master>` with a band, a footer and slide numbers; slides in two sections; bullets, numbering, a link and colored runs; a table built with `<TableRow>` and `<TableCell>` from a reactive array; and speaker notes, which the preview shows under each slide.
+
+<Component path="ReportExample" />
+
+Also in the demo: [Masters and tables](https://vue-pptx-document.vercel.app/#example-report). The file is `ReportDeck.vue`.
+
+## Report generator
+
+The demo app has a complete report generator on its [own tab](https://vue-pptx-document.vercel.app/#generator): a title slide with a logo, highlights, KPI cards in a flex row, a trend chart, a regions table next to a doughnut chart, and a closing slide, in the `16x9`, `4x3` or `wide` layout and with an accent color of your choice. Its template, `apps/example/src/generator/ReportTemplate.vue`, mixes absolute slides with flex ones and uses `LAYOUTS` to place objects relative to the slide size.
+
+## Import
+
+The [Import tab](https://vue-pptx-document.vercel.app/#import) reads a `.pptx` you drop on it with `pptxToVue()`, previews each slide and shows the generated component. See [Import and codegen](/guides/import).
+
+## More in the demo
+
+The demo's overview also has a headless section, which shows the refs `usePptx()` returns next to a `<SlidePreview>` thumbnail from `useSlides()`; an on-demand download that imports the library and the deck only on click; and a _Generate Vue code_ button that runs `renderToModel()` and `modelToVue()` on the flex deck.
