@@ -84,7 +84,7 @@
     "@microsoft/api-extractor": "^7.59.4",
     "@size-limit/esbuild": "^14",
     "@size-limit/file": "^14",
-    "@types/node": "^22",
+    "@types/node": "^26",
     "@vitejs/plugin-vue": "^6",
     "@vitest/browser-playwright": "5.0.5",
     "@vitest/coverage-v8": "5.0.5",
