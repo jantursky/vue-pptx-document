@@ -4,6 +4,8 @@ All notable changes to `vue-pptx-document` are listed here. The format follows [
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-10-23
+
 ### Added
 
 - Diagnostics: every warning is `{ code, message, slide, object }` and goes to an `onWarn` option, which `pptx()`, the render functions, `usePptx`, `useSlides` and `<Preview @warn>` take. `strict: true` rejects the render on the first warning instead.
@@ -39,5 +41,6 @@ All notable changes to `vue-pptx-document` are listed here. The format follows [
 - `vue-pptx-document/import`: `pptxToVue()`, `parsePptx()` and `modelToVue()` read a .pptx (runs, bullets, shapes, groups, pictures, tables, charts, theme colors, backgrounds, layouts and masters, sections, notes, slide numbers) and write a Vue component that renders it.
 - A `vue-pptx-document import deck.pptx -o Deck.vue` command line.
 
-[Unreleased]: https://github.com/jantursky/vue-pptx-document/compare/v1.0.0...HEAD
-[1.0.0]: https://github.com/jantursky/vue-pptx-document/releases/tag/v1.0.0
+[Unreleased]: https://github.com/jantursky/vue-pptx-document/compare/1.1.0...HEAD
+[1.1.0]: https://github.com/jantursky/vue-pptx-document/compare/1.0.0...1.1.0
+[1.0.0]: https://github.com/jantursky/vue-pptx-document/releases/tag/1.0.0
