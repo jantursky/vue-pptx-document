@@ -22,7 +22,7 @@
     "@types/node": "^22",
     "@vitejs/plugin-vue": "^6",
     "jszip": "^3.10.1",
-    "typescript": "~5.9.3",
+    "typescript": "~7.0.2",
     "vite": "^8",
     "vue-tsc": "^3"
   }
