@@ -3,7 +3,7 @@ title: Functions
 description: pptx, renderToBlob, renderToBuffer, renderToModel, downloadPptx, saveBlob, writeModel, toPptxGenJS and the helpers.
 ---
 
-All of these come from `vue-pptx-document`. `props` is the deck component's props as a plain object, except for `pptx()`, which also takes a ref or a getter.
+All of these come from `vue-pptx-document`. `props` is the deck component's props as a plain object, except for `pptx()`, which also takes a ref or a getter. It is typed from the component: a wrong type or a missing required prop is a type error, and when the deck has required props, `props` itself is required. Components without typed props take any object.
 
 ## renderToBlob
 
@@ -24,7 +24,7 @@ The same, resolving to the file's bytes. Needs no DOM, so it works in Node and w
 ## renderToModel
 
 ```ts
-function renderToModel(presentation: Component, props?: Props): Promise<DeckModel>
+function renderToModel(presentation: Component, props?: Props, options?: DiagnosticOptions): Promise<DeckModel>
 ```
 
 Mounts the deck, resolves it to its [DeckModel](/reference/types#deckmodel) and unmounts it. PptxGenJS isn't loaded.
@@ -48,16 +48,20 @@ Saves a Blob through a temporary `<a download>` link. The object URL is revoked 
 ## pptx
 
 ```ts
-function pptx(presentation: Component, props?: MaybeRefOrGetter<Props | undefined>): PptxInstance
+function pptx(
+  presentation: Component,
+  props?: MaybeRefOrGetter<Props | undefined>,
+  options?: DiagnosticOptions,
+): PptxInstance
 ```
 
-Mounts the deck in a Vue app of its own and returns an instance. Reactive `props` re-render the tree; call `unmount()` when you're done.
+Mounts the deck in a Vue app of its own and returns an instance. Reactive `props` re-render the tree; call `unmount()` when you're done. `options` apply to every render of the instance; options passed to a method win.
 
 ### PptxInstance
 
 | method                             | resolves to                                                                                     |
 | ---------------------------------- | ----------------------------------------------------------------------------------------------- |
-| `toModel()`                        | `Promise<DeckModel>`: frames in inches and PptxGenJS options.                                   |
+| `toModel(options?)`                | `Promise<DeckModel>`: frames in inches and PptxGenJS options.                                   |
 | `toBlob(options?: WriteOptions)`   | `Promise<Blob>`. Calls the `<Presentation>`'s `onRender({ blob })`.                             |
 | `toBuffer(options?: WriteOptions)` | `Promise<Uint8Array>`.                                                                          |
 | `toBase64(options?: WriteOptions)` | `Promise<string>`.                                                                              |
@@ -87,9 +91,13 @@ Builds the PptxGenJS presentation for a model without writing it, so you can add
 
 ## WriteOptions
 
-| option        | type      | default |                                                    |
-| ------------- | --------- | ------- | -------------------------------------------------- |
-| `compression` | `boolean` | `true`  | Deflate the zip. Off: faster writes, larger files. |
+| option        | type                             | default |                                                                                                             |
+| ------------- | -------------------------------- | ------- | ----------------------------------------------------------------------------------------------------------- |
+| `compression` | `boolean`                        | `true`  | Deflate the zip. Off: faster writes, larger files.                                                          |
+| `onWarn`      | `(warning: PptxWarning) => void` |         | Receives each warning instead of the console.                                                               |
+| `strict`      | `boolean`                        | `false` | Reject on the first warning. See [Troubleshooting](/guides/troubleshooting#warnings-codes-and-strict-mode). |
+
+`onWarn` and `strict` alone are `DiagnosticOptions`, which `renderToModel`, `pptx`, `useSlides` and `usePptx` take too. A [PptxWarning](/reference/types#pptxwarning) is `{ code, message, slide?, object? }`.
 
 ## PPTX_MIME
 

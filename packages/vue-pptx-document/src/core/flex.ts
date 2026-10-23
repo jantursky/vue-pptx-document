@@ -3,7 +3,8 @@ import type { Config, MeasureFunction, Node as YogaNode, Yoga as YogaInstance } 
 
 import { measureText } from './measure'
 import type { Frame, SlideObject } from './model'
-import { TYPES } from './nodes'
+import { tag, TYPES } from './nodes'
+import { at } from './diagnostics'
 import { DRAWABLE, runsOf, textOptions, toObject, viewBackground } from './objects'
 import type { TreeNode } from './snapshot'
 import { isPercent, PX_PER_IN, toInches } from './units'
@@ -55,7 +56,7 @@ export interface FlexStyle {
 type Enums = typeof YogaModule
 
 /** The Yoga instance and its enums, which live on the module rather than the instance. */
-interface Yoga {
+export interface Yoga {
   Node: YogaInstance['Node']
   Config: YogaInstance['Config']
   enums: Enums
@@ -286,7 +287,7 @@ const emit = (entry: Entry, originX: number, originY: number, out: SlideObject[]
     for (const child of entry.children) emit(child, x, y, out, false)
     return
   }
-  const object = toObject(entry.tree, frame)
+  const object = at({ object: tag(entry.tree.type) }, () => toObject(entry.tree, frame))
   if (object) out.push(object)
 }
 
@@ -294,8 +295,7 @@ const emit = (entry: Entry, originX: number, originY: number, out: SlideObject[]
  * Lays out `container`'s children with Yoga inside `frame` (inches) and appends the
  * resulting objects in document order.
  */
-export const layoutFlex = async (container: TreeNode, frame: Frame, out: SlideObject[]): Promise<void> => {
-  const Y = await loadYoga()
+export const layoutFlex = (Y: Yoga, container: TreeNode, frame: Frame, out: SlideObject[]): void => {
   const config = Y.Config.create()
   // Keep fractional pixels: slides are measured in inches, and rounding would move objects.
   config.setPointScaleFactor(0)

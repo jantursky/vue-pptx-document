@@ -83,7 +83,7 @@ It renders `div[data-pptx-slide]` with `role="group"` and `aria-roledescription=
 `useSlides(presentation, props?, options?)` is what `<Preview>` runs. It resolves the deck to its model and keeps it current, without writing a file:
 
 ```ts
-const { model, loading, error, update, instance } = useSlides(HelloDeck, props, { debounce: 50 })
+const { model, loading, error, warnings, update, instance } = useSlides(HelloDeck, props, { debounce: 50 })
 ```
 
 Use it for thumbnails, a slide picker or a viewer of your own. `instance()` returns the mounted presentation, so `instance()?.toBlob()` writes a file from the same tree without mounting it again. See the [reference](/reference/composables#useslides).

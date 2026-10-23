@@ -256,3 +256,15 @@ describe('notes and hidden objects', () => {
     expect(objects[0]).toMatchObject({ kind: 'text', runs: [{ text: 'Shown' }] })
   })
 })
+
+describe('images', () => {
+  it('skips an <Image> without a src instead of writing an empty path', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+    const model = await renderToModel(
+      singleSlide(() => [h(Image, { x: 0, y: 0, w: 1, h: 1 }), h(Text, { x: 0, y: 1, w: 1, h: 1 }, () => 'Kept')]),
+    )
+    expect(model.slides[0]!.objects.map((object) => object.kind)).toEqual(['text'])
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('<Image> without a `src` is skipped'))
+    warn.mockRestore()
+  })
+})

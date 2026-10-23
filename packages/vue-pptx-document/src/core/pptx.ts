@@ -4,7 +4,9 @@ import { h, toValue, type Component, type MaybeRefOrGetter } from 'vue'
 import type { DeckModel } from './model'
 import { createRoot } from './nodes'
 import { renderer } from './renderer'
-import { resolve } from './resolve'
+import { createContext, inContext, type DiagnosticOptions } from './diagnostics'
+import type { PropsArgs, ReactivePropsArgs } from './props'
+import { resolveIn } from './resolve'
 import { snapshot } from './snapshot'
 import { toPptxGenJS, writeModel, type WriteOptions } from './write'
 
@@ -14,7 +16,7 @@ export const PPTX_MIME = 'application/vnd.openxmlformats-officedocument.presenta
 
 export interface PptxInstance {
   /** The resolved slides: frames in inches and PptxGenJS options, as the preview draws them. */
-  toModel(): Promise<DeckModel>
+  toModel(options?: DiagnosticOptions): Promise<DeckModel>
   toBlob(options?: WriteOptions): Promise<Blob>
   toBuffer(options?: WriteOptions): Promise<Uint8Array>
   toBase64(options?: WriteOptions): Promise<string>
@@ -29,7 +31,11 @@ export interface PptxInstance {
  * Mounts `presentation` in a Vue app of its own, with the renderer that builds the slide tree.
  * Reactive `props` re-render it; call `unmount()` when you're done.
  */
-export const pptx = (presentation: Component, props?: MaybeRefOrGetter<Props | undefined>): PptxInstance => {
+export const pptx = <C extends Component>(
+  presentation: C,
+  ...[documentProps, options = {}]: ReactivePropsArgs<C, [options?: DiagnosticOptions]>
+): PptxInstance => {
+  const props = documentProps as MaybeRefOrGetter<Props | undefined>
   const root = createRoot()
   const listeners = new Set<() => void>()
   root.onChange = () => {
@@ -39,13 +45,19 @@ export const pptx = (presentation: Component, props?: MaybeRefOrGetter<Props | u
   app.mount(root)
   let mounted = true
 
-  const toModel = (): Promise<DeckModel> => {
-    if (!mounted) return Promise.reject(new Error('[vue-pptx-document] This presentation was unmounted.'))
-    try {
-      return resolve(snapshot(root))
-    } catch (error) {
-      return Promise.reject(error instanceof Error ? error : new Error(String(error)))
-    }
+  const toModel = async (call: DiagnosticOptions = {}): Promise<DeckModel> => {
+    if (!mounted) throw new Error('[vue-pptx-document] This presentation was unmounted.')
+    // One context for the snapshot and the resolve, so a warning is reported once per render.
+    const context = createContext({ ...options, ...call })
+    return resolveIn(
+      context,
+      inContext(context, () => snapshot(root)),
+    )
+  }
+
+  const write = async (outputType: 'uint8array' | 'base64', call: WriteOptions = {}) => {
+    const merged = { ...options, ...call }
+    return writeModel(await toModel(merged), outputType, merged)
   }
 
   const onRender = (blob: Blob): void => {
@@ -56,20 +68,20 @@ export const pptx = (presentation: Component, props?: MaybeRefOrGetter<Props | u
 
   return {
     toModel,
-    async toBlob(options) {
-      const bytes = (await writeModel(await toModel(), 'uint8array', options)) as Uint8Array
+    async toBlob(call) {
+      const bytes = (await write('uint8array', call)) as Uint8Array
       const blob = new Blob([bytes as BlobPart], { type: PPTX_MIME })
       onRender(blob)
       return blob
     },
-    async toBuffer(options) {
-      return (await writeModel(await toModel(), 'uint8array', options)) as Uint8Array
+    async toBuffer(call) {
+      return (await write('uint8array', call)) as Uint8Array
     },
-    async toBase64(options) {
-      return (await writeModel(await toModel(), 'base64', options)) as string
+    async toBase64(call) {
+      return (await write('base64', call)) as string
     },
     async toPptxGenJS() {
-      return toPptxGenJS(await toModel())
+      return toPptxGenJS(await toModel(), options)
     },
     onChange(listener) {
       listeners.add(listener)
@@ -87,10 +99,11 @@ export const pptx = (presentation: Component, props?: MaybeRefOrGetter<Props | u
 
 const once = async <T>(
   presentation: Component,
-  props: Props | undefined,
+  props: unknown,
+  options: DiagnosticOptions | undefined,
   run: (instance: PptxInstance) => Promise<T>,
 ): Promise<T> => {
-  const instance = pptx(presentation, props)
+  const instance = pptx(presentation, props as Props | undefined, options)
   try {
     return await run(instance)
   } finally {
@@ -99,16 +112,22 @@ const once = async <T>(
 }
 
 /** Renders once to the bytes of a .pptx file. Works in Node, workers and the browser. */
-export const renderToBuffer = (presentation: Component, props?: Props, options?: WriteOptions): Promise<Uint8Array> =>
-  once(presentation, props, (instance) => instance.toBuffer(options))
+export const renderToBuffer = <C extends Component>(
+  presentation: C,
+  ...[props, options]: PropsArgs<C, [options?: WriteOptions]>
+): Promise<Uint8Array> => once(presentation, props, options, (instance) => instance.toBuffer(options))
 
 /** Renders once to a Blob with the PowerPoint MIME type. */
-export const renderToBlob = (presentation: Component, props?: Props, options?: WriteOptions): Promise<Blob> =>
-  once(presentation, props, (instance) => instance.toBlob(options))
+export const renderToBlob = <C extends Component>(
+  presentation: C,
+  ...[props, options]: PropsArgs<C, [options?: WriteOptions]>
+): Promise<Blob> => once(presentation, props, options, (instance) => instance.toBlob(options))
 
 /** Renders once to the resolved model, without PptxGenJS. */
-export const renderToModel = (presentation: Component, props?: Props): Promise<DeckModel> =>
-  once(presentation, props, (instance) => instance.toModel())
+export const renderToModel = <C extends Component>(
+  presentation: C,
+  ...[props, options]: PropsArgs<C, [options?: DiagnosticOptions]>
+): Promise<DeckModel> => once(presentation, props, options, (instance) => instance.toModel())
 
 /** Saves a Blob in the browser through a temporary link. */
 export const saveBlob = (blob: Blob, fileName: string): void => {
@@ -126,13 +145,11 @@ export const saveBlob = (blob: Blob, fileName: string): void => {
 }
 
 /** Renders once and saves the file in the browser. */
-export const downloadPptx = async (
-  presentation: Component,
-  props?: Props,
-  fileName = 'presentation.pptx',
-  options?: WriteOptions,
+export const downloadPptx = async <C extends Component>(
+  presentation: C,
+  ...[props, fileName = 'presentation.pptx', options]: PropsArgs<C, [fileName?: string, options?: WriteOptions]>
 ): Promise<Blob> => {
-  const blob = await renderToBlob(presentation, props, options)
+  const blob = await once(presentation, props, options, (instance) => instance.toBlob(options))
   saveBlob(blob, fileName.endsWith('.pptx') ? fileName : `${fileName}.pptx`)
   return blob
 }

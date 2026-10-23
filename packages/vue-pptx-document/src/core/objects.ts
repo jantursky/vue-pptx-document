@@ -1,6 +1,7 @@
 import type PptxGenJS from 'pptxgenjs'
 
 import { normalizeColors } from './colors'
+import { warn } from './diagnostics'
 import type {
   Background,
   ChartName,
@@ -211,7 +212,11 @@ export const toObject = (node: TreeNode, frame: Frame): SlideObject | undefined 
     }
     case TYPES.image: {
       const src = typeof props.src === 'string' ? props.src : ''
-      if (!src) console.warn('[vue-pptx-document] <Image> needs a `src`.')
+      if (!src) {
+        // PptxGenJS would fail later on an empty path, without saying which object it was.
+        warn('missing-src', '<Image> without a `src` is skipped.')
+        return undefined
+      }
       return {
         kind: 'image',
         frame,

@@ -10,7 +10,9 @@ import {
   type Ref,
 } from 'vue'
 
+import { collect, type PptxWarning } from '../core/diagnostics'
 import { pptx, type PptxInstance } from '../core/pptx'
+import type { ReactivePropsArgs } from '../core/props'
 import type { WriteOptions } from '../core/write'
 
 type Props = Record<string, unknown>
@@ -30,6 +32,8 @@ export interface UsePptxReturn {
   url: Readonly<Ref<string | null>>
   loading: Readonly<Ref<boolean>>
   error: Readonly<Ref<unknown>>
+  /** The warnings of the latest finished render. */
+  warnings: Readonly<Ref<readonly PptxWarning[]>>
   /** Renders now and resolves with the new Blob. */
   update: () => Promise<Blob | null>
 }
@@ -38,16 +42,17 @@ export interface UsePptxReturn {
  * Renders `presentation` to a .pptx Blob and an object URL, and renders again after reactive
  * changes. Rendering starts on mount, so server-side rendering never runs PptxGenJS.
  */
-export function usePptx(
-  presentation: Component,
-  props?: MaybeRefOrGetter<Props | undefined>,
-  options: UsePptxOptions = {},
+export function usePptx<C extends Component>(
+  presentation: C,
+  ...[documentProps, options = {}]: ReactivePropsArgs<C, [options?: UsePptxOptions]>
 ): UsePptxReturn {
+  const props = documentProps as MaybeRefOrGetter<Props | undefined>
   const { debounce = 300, auto = true, ...write } = options
   const blob = shallowRef<Blob | null>(null)
   const url = ref<string | null>(null)
   const loading = ref(auto)
   const error = shallowRef<unknown>(null)
+  const warnings = shallowRef<readonly PptxWarning[]>([])
   let instance: PptxInstance | undefined
   let stop: (() => void) | undefined
   let disposed = false
@@ -72,7 +77,7 @@ export function usePptx(
 
   const start = (): void => {
     if (disposed || instance) return
-    instance = pptx(presentation, props)
+    instance = pptx<Component>(presentation, props)
     if (auto) {
       stop = instance.onChange(() => {
         clearTimeout(timer)
@@ -87,8 +92,9 @@ export function usePptx(
     clearTimeout(timer)
     const current = ++run
     loading.value = true
+    const collected = collect(write)
     try {
-      const result = await instance.toBlob(write)
+      const result = await instance.toBlob({ ...write, ...collected.options })
       if (current !== run) return result
       blob.value = result
       setUrl(URL.createObjectURL(result))
@@ -98,7 +104,10 @@ export function usePptx(
       if (current === run) error.value = caught
       return null
     } finally {
-      if (current === run) loading.value = false
+      if (current === run) {
+        loading.value = false
+        warnings.value = collected.warnings
+      }
     }
   }
 
@@ -130,6 +139,7 @@ export function usePptx(
     url: shallowReadonly(url),
     loading: shallowReadonly(loading),
     error: shallowReadonly(error),
+    warnings: shallowReadonly(warnings),
     update,
   }
 }

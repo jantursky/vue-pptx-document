@@ -185,6 +185,33 @@ interface TextRun {
 type TableCellModel = { text?: string | TextRun[]; options?: PptxGenJS.TableCellProps }
 ```
 
+## PptxWarning
+
+```ts
+interface PptxWarning {
+  code: WarningCode
+  message: string
+  slide?: number // 1-based
+  object?: string // such as '<Image>'
+}
+
+type WarningCode =
+  | 'dropped-text'
+  | 'misplaced-object'
+  | 'unknown-master'
+  | 'master-object-dropped'
+  | 'missing-src'
+  | 'unknown-color'
+  | 'unknown-prop'
+
+interface DiagnosticOptions {
+  onWarn?: (warning: PptxWarning) => void
+  strict?: boolean
+}
+```
+
+What each code means: [Troubleshooting](/guides/troubleshooting#warnings-codes-and-strict-mode).
+
 ## Other exported types
 
 | type                                  | see                                           |

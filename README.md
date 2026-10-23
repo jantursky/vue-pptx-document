@@ -65,7 +65,7 @@ bun run format         # format everything with Prettier
 bun run lint:fix       # fix what ESLint can fix
 ```
 
-`bun run build` ends with [size-limit](https://github.com/ai/size-limit) and fails if the library's own code grows past 24 kB minified and gzipped (about 22 kB today), if the library with PptxGenJS and Yoga passes 200 kB (about 188 kB), or if the importer passes 70 kB (about 62 kB). The budgets are in `packages/vue-pptx-document/.size-limit.json`, and `.github/workflows/size.yml` comments the change on every pull request. Coverage goes to [Codecov](https://codecov.io/gh/jantursky/vue-pptx-document) from CI. Coverage has minimum thresholds, so `bun run check` fails if they drop.
+`bun run build` ends with [size-limit](https://github.com/ai/size-limit) and fails if the library's own code grows past 26 kB minified and gzipped (about 25 kB today), if the library with PptxGenJS and Yoga passes 200 kB (about 191 kB), or if the importer passes 70 kB (about 62 kB). The budgets are in `packages/vue-pptx-document/.size-limit.json`, and `.github/workflows/size.yml` comments the change on every pull request. Coverage goes to [Codecov](https://codecov.io/gh/jantursky/vue-pptx-document) from CI. Coverage has minimum thresholds, so `bun run check` fails if they drop.
 
 Tests come in seven layers:
 

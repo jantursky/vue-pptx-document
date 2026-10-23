@@ -3,19 +3,45 @@ title: Troubleshooting
 description: Common errors and warnings, and what causes them.
 ---
 
+## Warnings, codes and strict mode
+
+Warnings end with where they happened, such as `(slide 3, <Image>)`, and are logged once per message for each render. To handle them yourself, pass `onWarn`; to fail instead, pass `strict: true`:
+
+```ts
+const warnings: PptxWarning[] = []
+const bytes = await renderToBuffer(ReportDeck, props, { onWarn: (warning) => warnings.push(warning) })
+
+// In CI: any warning rejects the render.
+await renderToBuffer(ReportDeck, props, { strict: true })
+```
+
+Each warning is `{ code, message, slide?, object? }`. Match on `code`, since the wording may change:
+
+| code                    | cause                                                          |
+| ----------------------- | -------------------------------------------------------------- |
+| `dropped-text`          | Text outside a text component.                                 |
+| `misplaced-object`      | A component where it can't be placed.                          |
+| `unknown-master`        | A slide names a master that doesn't exist.                     |
+| `master-object-dropped` | An object a PptxGenJS master can't hold.                       |
+| `missing-src`           | An `<Image>` without `src`.                                    |
+| `unknown-color`         | A color that is neither a CSS color nor a theme color.         |
+| `unknown-prop`          | A prop the component doesn't know, in development builds only. |
+
+`usePptx`, `useSlides` and `<Preview @warn>` take the same options; the composables also return the latest render's `warnings`. Errors name the slide and object the same way, such as `ENOENT: no such file … (slide 3, <Image>)`.
+
 ## "The root component must render a single &lt;Presentation&gt;"
 
 The component given to `<Preview>`, `usePptx`, `pptx()` or the `renderTo*` functions has to start with `<Presentation>`. A wrapper element, or a fragment with siblings around it, isn't valid.
 
-## "Text … inside &lt;SLIDE&gt; is dropped. Wrap it in &lt;Text&gt;."
+## "Text … inside &lt;Slide&gt; is dropped. Wrap it in &lt;Text&gt;."
 
 Strings only render inside `<Text>`, `<Paragraph>`, `<Run>`, `<Shape>`, `<TableCell>`, `<Notes>` and `<Placeholder>`. A string directly in a `<Slide>`, `<View>` or `<Table>` is dropped. Wrap it.
 
-## "&lt;PARAGRAPH&gt; can't be placed directly on a slide; it is skipped."
+## "&lt;Paragraph&gt; can't be placed directly on a slide; it is skipped."
 
 `<Paragraph>`, `<Run>` and `<Br>` only work inside a text box (`<Text>`, `<Shape>`, a table cell or `<Notes>`). `<TableRow>` and `<TableCell>` only work inside `<Table>`.
 
-## "&lt;TEXT&gt; must be inside a &lt;Slide&gt; or &lt;Master&gt;; it is skipped."
+## "&lt;Text&gt; must be inside a &lt;Slide&gt; or &lt;Master&gt;; it is skipped."
 
 `<Presentation>` holds only `<Slide>` and `<Master>` elements. Everything else goes inside one of them.
 
@@ -26,6 +52,14 @@ A slide's `master` prop names a master that doesn't exist. Names are case-sensit
 ## "A table can't be part of a master; it is skipped."
 
 PptxGenJS masters take text, images, single-type charts, placeholders, and `rect` and `line` shapes. Tables, media, other shapes and combo charts are skipped when the file is written, though the preview still draws them. Put them on the slides instead. See [Masters](/guides/masters#what-a-master-can-hold).
+
+## "&lt;Image&gt; without a `src` is skipped."
+
+The image is left out of the file and the preview. A `src` that is set later, such as an uploaded logo, renders it on the next update.
+
+## "Unknown color "…" is ignored."
+
+Colors take CSS hex, every CSS color name, `transparent` and theme colors. See [Colors](/guides/text#colors). Anything else is dropped so PowerPoint doesn't ask to repair the file.
 
 ## "Unknown layout" or "A custom layout needs a width and a height"
 

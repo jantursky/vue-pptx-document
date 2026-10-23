@@ -107,8 +107,10 @@ const { blob, url, loading, error } = usePptx(HelloDeck, props, { debounce: 400 
 | `debounce`    | `300`   | Milliseconds between the last change and a render.                              |
 | `auto`        | `true`  | Render on mount and after every change. `false`: only when you call `update()`. |
 | `compression` | `true`  | Deflate the zip.                                                                |
+| `onWarn`      |         | Receives each warning instead of the console.                                   |
+| `strict`      | `false` | Fail the render on the first warning; the error lands in `error`.               |
 
-It returns read-only refs `blob`, `url`, `loading` and `error`, and `update()`, which renders now and resolves to the new Blob (or `null` when it failed). Rendering starts on mount, so server-side rendering of the page never runs PptxGenJS. A replaced URL stays valid for 10 seconds so a download still reading it can finish, and every URL is revoked when the component unmounts.
+It returns read-only refs `blob`, `url`, `loading`, `error` and `warnings` (those of the latest finished render), and `update()`, which renders now and resolves to the new Blob (or `null` when it failed). Rendering starts on mount, so server-side rendering of the page never runs PptxGenJS. A replaced URL stays valid for 10 seconds so a download still reading it can finish, and every URL is revoked when the component unmounts.
 
 With `auto: false`, nothing renders until you ask:
 

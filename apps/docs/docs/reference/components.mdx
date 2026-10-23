@@ -77,6 +77,7 @@ A flex container. Its children are laid out with Yoga inside its box.
 | `fill`, `line`     | Draw a rectangle behind the children.       |
 | `rect-radius`      | Round that rectangle's corners.             |
 | `shadow`           | A shadow on that rectangle.                 |
+| `rotate`           | Rotate that rectangle, in degrees.          |
 
 ## Text
 
@@ -169,7 +170,7 @@ Content: strings, `Run`, `Paragraph` and `Br`.
 | `chart-colors`               | Series colors.                                                                                                                       |
 | `bar-dir`, `bar-grouping`    | `bar` or `col`; `clustered`, `stacked`, `percentStacked` or `standard`.                                                              |
 
-Any other PptxGenJS chart option works as a prop. These are declared as flags: `show-title`, `show-legend`, `show-value`, `show-percent`, `show-label`, `show-val-axis-title`, `show-cat-axis-title`, `cat-axis-hidden`, `val-axis-hidden`, `show-leader-lines`, `show-ser-name`, `show-data-table`. See [Charts](/guides/charts).
+Every other PptxGenJS chart option works as a prop, typed from PptxGenJS's `IChartOpts`, so with `strictTemplates` a misspelled one is a type error. These are declared as flags: `show-title`, `show-legend`, `show-value`, `show-percent`, `show-label`, `show-val-axis-title`, `show-cat-axis-title`, `cat-axis-hidden`, `val-axis-hidden`, `show-leader-lines`, `show-ser-name`, `show-data-table`. See [Charts](/guides/charts).
 
 ## Media
 
@@ -197,6 +198,7 @@ Draws every slide as HTML and SVG and redraws after changes. See [Preview](/guid
 | `notes`          | `false`                  | Show speaker notes under each slide.               |
 | `debounce`       | `50`                     | Milliseconds between the last change and a redraw. |
 | `label`          | `'Presentation preview'` | Accessible name.                                   |
+| `@warn`          |                          | Receives each warning instead of the console.      |
 
 | slot      | props                     |                                        |
 | --------- | ------------------------- | -------------------------------------- |

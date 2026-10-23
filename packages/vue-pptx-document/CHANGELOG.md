@@ -4,6 +4,28 @@ All notable changes to `vue-pptx-document` are listed here. The format follows [
 
 ## [Unreleased]
 
+### Added
+
+- Diagnostics: every warning is `{ code, message, slide, object }` and goes to an `onWarn` option, which `pptx()`, the render functions, `usePptx`, `useSlides` and `<Preview @warn>` take. `strict: true` rejects the render on the first warning instead.
+- `usePptx` and `useSlides` return the latest render's `warnings`.
+- Errors name the slide and component they come from, including images PptxGenJS can't read, such as `ENOENT … (slide 3, <Image>)`.
+- In development builds, a prop a component doesn't know warns with code `unknown-prop` and suggests the closest name (`fontsize` → `fontSize`). Bundlers drop the check from production builds.
+- `props` is typed from the presentation component in `pptx()`, the render functions, the composables and `<Preview :document-props>`, and is required when the deck has required props.
+- `<Chart>` props are typed from PptxGenJS's chart options.
+
+### Changed
+
+- Warnings are logged once per message for each render, instead of once per process, so a server that renders many decks sees them every time.
+- Warning messages name components as written (`<Slide>`, `<TableRow>`) instead of their internal node types.
+- `<Chart>` props no longer accept keys outside PptxGenJS's chart options. PptxGenJS ignored those keys anyway.
+- The library's own size budget is 26 kB gzipped (was 24 kB); it measures 25 kB with this release.
+
+### Fixed
+
+- `transparent` and the alpha of an eight-digit hex color now become `transparency` instead of an opaque color. `transparent` used to write white.
+- Every CSS color name is known (`lightgray`, `tomato`, `rebeccapurple`, ...). Unknown color values are dropped with a warning instead of being written into the file, where PowerPoint asked to repair it.
+- An `<Image>` without a `src` is skipped with a warning instead of reaching PptxGenJS with an empty path.
+
 ## [1.0.0] - 2026-10-23
 
 ### Added

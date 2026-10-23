@@ -21,21 +21,24 @@ Renders the deck to a `.pptx` Blob and an object URL, and renders again after ch
 
 ### UsePptxOptions
 
-| option        | type      | default |                                                                      |
-| ------------- | --------- | ------- | -------------------------------------------------------------------- |
-| `debounce`    | `number`  | `300`   | Milliseconds to wait after a change before rendering again.          |
-| `auto`        | `boolean` | `true`  | Render on mount and after every change. `false`: only on `update()`. |
-| `compression` | `boolean` | `true`  | Deflate the zip.                                                     |
+| option        | type                             | default |                                                                      |
+| ------------- | -------------------------------- | ------- | -------------------------------------------------------------------- |
+| `debounce`    | `number`                         | `300`   | Milliseconds to wait after a change before rendering again.          |
+| `auto`        | `boolean`                        | `true`  | Render on mount and after every change. `false`: only on `update()`. |
+| `compression` | `boolean`                        | `true`  | Deflate the zip.                                                     |
+| `onWarn`      | `(warning: PptxWarning) => void` |         | Receives each warning instead of the console.                        |
+| `strict`      | `boolean`                        | `false` | Fail the render on the first warning.                                |
 
 ### UsePptxReturn
 
-| field     | type                            |                                                              |
-| --------- | ------------------------------- | ------------------------------------------------------------ |
-| `blob`    | `Readonly<Ref<Blob \| null>>`   | The latest file.                                             |
-| `url`     | `Readonly<Ref<string \| null>>` | An object URL for `blob`.                                    |
-| `loading` | `Readonly<Ref<boolean>>`        | `true` while a render runs. Starts `true` when `auto` is on. |
-| `error`   | `Readonly<Ref<unknown>>`        | The last render's error, or `null`.                          |
-| `update`  | `() => Promise<Blob \| null>`   | Renders now. Resolves to the Blob, or `null` on failure.     |
+| field      | type                                    |                                                              |
+| ---------- | --------------------------------------- | ------------------------------------------------------------ |
+| `blob`     | `Readonly<Ref<Blob \| null>>`           | The latest file.                                             |
+| `url`      | `Readonly<Ref<string \| null>>`         | An object URL for `blob`.                                    |
+| `loading`  | `Readonly<Ref<boolean>>`                | `true` while a render runs. Starts `true` when `auto` is on. |
+| `error`    | `Readonly<Ref<unknown>>`                | The last render's error, or `null`.                          |
+| `warnings` | `Readonly<Ref<readonly PptxWarning[]>>` | The warnings of the latest finished render.                  |
+| `update`   | `() => Promise<Blob \| null>`           | Renders now. Resolves to the Blob, or `null` on failure.     |
 
 A replaced URL is revoked 10 seconds later, so a download still reading it can finish. All URLs are revoked when the scope is disposed. When renders overlap, only the newest one updates the refs.
 
@@ -53,16 +56,19 @@ Resolves the deck to its `DeckModel` and keeps it current, without writing a fil
 
 ### UseSlidesOptions
 
-| option     | type     | default |                                                             |
-| ---------- | -------- | ------- | ----------------------------------------------------------- |
-| `debounce` | `number` | `50`    | Milliseconds to wait after a change before resolving again. |
+| option     | type                             | default |                                                             |
+| ---------- | -------------------------------- | ------- | ----------------------------------------------------------- |
+| `debounce` | `number`                         | `50`    | Milliseconds to wait after a change before resolving again. |
+| `onWarn`   | `(warning: PptxWarning) => void` |         | Receives each warning instead of the console.               |
+| `strict`   | `boolean`                        | `false` | Fail the update on the first warning.                       |
 
 ### UseSlidesReturn
 
-| field      | type                               |                                                                                                       |
-| ---------- | ---------------------------------- | ----------------------------------------------------------------------------------------------------- |
-| `model`    | `Readonly<Ref<DeckModel \| null>>` | The resolved slides, as `<SlidePreview>` draws them.                                                  |
-| `loading`  | `Readonly<Ref<boolean>>`           | `true` until the first model, and while it updates.                                                   |
-| `error`    | `Readonly<Ref<unknown>>`           | The last error, or `null`.                                                                            |
-| `update`   | `() => Promise<void>`              | Resolves again now.                                                                                   |
-| `instance` | `() => PptxInstance \| undefined`  | The mounted presentation, for `toBlob()` and the other [instance methods](/reference/functions#pptx). |
+| field      | type                                    |                                                                                                       |
+| ---------- | --------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `model`    | `Readonly<Ref<DeckModel \| null>>`      | The resolved slides, as `<SlidePreview>` draws them.                                                  |
+| `loading`  | `Readonly<Ref<boolean>>`                | `true` until the first model, and while it updates.                                                   |
+| `error`    | `Readonly<Ref<unknown>>`                | The last error, or `null`.                                                                            |
+| `warnings` | `Readonly<Ref<readonly PptxWarning[]>>` | The warnings of the latest finished update.                                                           |
+| `update`   | `() => Promise<void>`                   | Resolves again now.                                                                                   |
+| `instance` | `() => PptxInstance \| undefined`       | The mounted presentation, for `toBlob()` and the other [instance methods](/reference/functions#pptx). |

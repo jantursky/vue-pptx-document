@@ -17,7 +17,7 @@ bun add vue-pptx-document
 # or: npm install vue-pptx-document, pnpm add vue-pptx-document, yarn add vue-pptx-document
 ```
 
-It requires Vue `^3.5` and is ESM only. PptxGenJS and Yoga load on first use and add about 165 kB gzipped to a browser bundle; the preview alone doesn't need PptxGenJS.
+It requires Vue `^3.5` and, on the server, Node.js 20.19 or newer. It is ESM only. PptxGenJS and Yoga load on first use and add about 165 kB gzipped to a browser bundle; the preview alone doesn't need PptxGenJS.
 
 ## Quick start
 
@@ -109,13 +109,15 @@ npx vue-pptx-document import deck.pptx -o Deck.vue
 | `View`                                                                 | A flexbox container, with an optional background rectangle.                                  |
 | `<Preview>`, `<SlidePreview>`                                          | HTML and SVG rendering of the slides, with `loading`, `error` and `caption` slots.           |
 | `<PptxDownloadButton>`                                                 | A button that writes the file on click and saves it.                                         |
-| `usePptx(document, props?, options?)`                                  | `blob`, `url`, `loading` and `error` refs that follow reactive changes.                      |
+| `usePptx(document, props?, options?)`                                  | `blob`, `url`, `loading`, `error` and `warnings` refs that follow reactive changes.          |
 | `useSlides(document, props?, options?)`                                | The resolved slide model for your own viewer or thumbnails.                                  |
 | `renderToBuffer`, `renderToBlob`, `renderToModel`, `downloadPptx`      | Render once; `renderToBuffer` works in Node and workers.                                     |
-| `pptx(document, props?)`                                               | The low-level handle: `toBlob()`, `toBuffer()`, `toModel()`, `toPptxGenJS()`, `onChange()`.  |
+| `pptx(document, props?, options?)`                                     | The low-level handle: `toBlob()`, `toBuffer()`, `toModel()`, `toPptxGenJS()`, `onChange()`.  |
 | `pptxToVue`, `parsePptx`, `modelToVue` from `vue-pptx-document/import` | Read a .pptx, and write a model as a Vue component.                                          |
 
 In templates, kebab-case attributes reach PptxGenJS in camelCase (`:font-size` is `fontSize`), flags such as `bold`, `bullet` and `show-legend` work as bare attributes, and colors take `#RRGGBB`, `#RGB` or CSS names.
+
+`props` is typed from the presentation component, and every entry point takes `onWarn` and `strict` for warnings such as dropped text or an unknown prop, each with its slide and component.
 
 The presentation is mounted as its own Vue app, so it doesn't see `provide`/`inject` or plugins from the page that shows it; pass what it needs as props.
 

@@ -1,7 +1,7 @@
 // The assertions here run at compile time: `bun run typecheck` fails when the public
 // types drift. At runtime the file only checks that the exports exist.
 import { describe, expectTypeOf, it } from 'vitest'
-import type { Ref } from 'vue'
+import { defineComponent, h, type Ref } from 'vue'
 
 import {
   pptx,
@@ -10,7 +10,9 @@ import {
   renderToModel,
   usePptx,
   useSlides,
+  Presentation,
   type Chart,
+  type ChartProps,
   type DeckModel,
   type PptxInstance,
   type Slide,
@@ -42,5 +44,46 @@ describe('public types', () => {
     expectTypeOf(useSlides).returns.toHaveProperty('model')
     expectTypeOf(pptxToVue).returns.toEqualTypeOf<Promise<PptxToVueResult>>()
     expectTypeOf(renderToBuffer).toBeCallableWith(Deck, { title: 'T', points: [] })
+  })
+
+  it('types document props from the component', () => {
+    // Deck.vue declares `title: string` and `points: string[]`, both required.
+    expectTypeOf(renderToBuffer).toBeCallableWith(Deck, { title: 'T', points: [] }, { strict: true })
+    const Runtime = defineComponent({
+      props: { count: { type: Number, required: true } },
+      setup: () => () => h(Presentation),
+    })
+    // Never called: these lines only have to fail the type check.
+    const wrong = () => {
+      // @ts-expect-error title is a string
+      void renderToBuffer(Deck, { title: 1, points: [] })
+      // @ts-expect-error points is required
+      void renderToModel(Deck, { title: 'T' })
+      // @ts-expect-error the props are required when the deck has required props
+      void renderToBlob(Deck)
+      // @ts-expect-error the same for the composables and pptx()
+      usePptx(Deck)
+      // @ts-expect-error count is a number
+      void renderToModel(Runtime, { count: 'two' })
+      // @ts-expect-error showLegnd is not a chart option
+      const typo: ChartProps = { type: 'bar', showLegnd: true }
+      return typo
+    }
+    expectTypeOf(wrong).toBeFunction()
+    expectTypeOf({
+      type: 'bar',
+      showLegend: true,
+      valAxisTitle: 'Revenue',
+      catAxisLabelRotate: 45,
+    } as const).toExtend<ChartProps>()
+    expectTypeOf(useSlides).toBeCallableWith(Deck, () => ({ title: 'T', points: ['a'] }), { debounce: 0 })
+    expectTypeOf(pptx).toBeCallableWith(Deck, { title: 'T', points: [] })
+
+    expectTypeOf(renderToModel).toBeCallableWith(Runtime, { count: 2 })
+
+    // Without declared props, any object (or nothing) goes.
+    const Bare = defineComponent(() => () => h(Presentation))
+    expectTypeOf(renderToModel).toBeCallableWith(Bare)
+    expectTypeOf(renderToModel).toBeCallableWith(Bare, { anything: true })
   })
 })

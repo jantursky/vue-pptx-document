@@ -105,8 +105,8 @@ describe('charts', () => {
     const wrapper = await draw(() =>
       h(Chart, {
         type: [
-          { type: 'bar', data: [series[0]] },
-          { type: 'line', data: [series[1]], options: { secondaryValAxis: true, secondaryCatAxis: true } },
+          { type: 'bar', data: [series[0]!] },
+          { type: 'line', data: [series[1]!], options: { secondaryValAxis: true, secondaryCatAxis: true } },
         ],
         x: 0,
         y: 0,
@@ -126,7 +126,7 @@ describe('charts', () => {
 
   it('runs horizontal bar categories from the bottom, as PowerPoint does', async () => {
     const wrapper = await draw(() =>
-      h(Chart, { type: 'bar', barDir: 'bar', x: 0, y: 0, w: 8, h: 4.5, data: [series[0]] }),
+      h(Chart, { type: 'bar', barDir: 'bar', x: 0, y: 0, w: 8, h: 4.5, data: [series[0]!] }),
     )
     const labels = wrapper.findAll('svg text').filter((node) => ['Q1', 'Q3'].includes(node.text()))
     const y = (name: string) => Number(labels.find((node) => node.text() === name)!.attributes('y'))

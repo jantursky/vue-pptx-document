@@ -21,6 +21,14 @@ export const TYPES = {
 
 export type NodeType = (typeof TYPES)[keyof typeof TYPES]
 
+/** The component name of a node type, for messages: `TABLE_ROW` is `<TableRow>`. */
+export const tag = (type: string): string =>
+  `<${type
+    .toLowerCase()
+    .split('_')
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join('')}>`
+
 export const ROOT = 'ROOT'
 
 /** Elements whose children may be plain text. Text anywhere else is dropped with a warning. */

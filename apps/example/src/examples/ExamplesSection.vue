@@ -19,7 +19,7 @@ import reportSource from './ReportExample.vue?raw'
   <section class="examples" aria-labelledby="examples-title">
     <header class="section-head examples-head">
       <p class="tag">Examples</p>
-      <h2 id="examples-title">Four decks, live</h2>
+      <h2 id="examples-title">Decks, live</h2>
       <p>
         Each example is a presentation component plus the page that shows it. The preview is HTML drawn from the same
         tree PptxGenJS writes, so it updates as you type. Open <em>View source</em> to read the exact files that run

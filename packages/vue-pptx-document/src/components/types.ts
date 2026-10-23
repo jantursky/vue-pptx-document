@@ -141,21 +141,16 @@ export interface TableCellProps extends ParagraphProps {
 
 export type ChartType = ChartName | Lowercase<ChartName>
 
-export interface ChartProps extends PositionProps {
+/**
+ * Every PptxGenJS chart option, typed. There is no catch-all key, so a misspelled option is a
+ * type error in templates checked with `strictTemplates` and in objects typed as `ChartProps`.
+ */
+export interface ChartProps
+  extends PositionProps, Omit<PptxGenJS.IChartOpts, keyof PositionProps | 'chartColors' | 'style'> {
   /** A chart type, or several `{ type, data, options }` for a combo chart. */
   type: ChartType | ComboChart[]
   data?: ChartSeries[]
-  title?: string
-  showTitle?: boolean
-  showLegend?: boolean
-  legendPos?: 'b' | 'l' | 'r' | 't' | 'tr'
-  showValue?: boolean
-  showPercent?: boolean
   chartColors?: Color[]
-  barDir?: 'bar' | 'col'
-  barGrouping?: 'clustered' | 'stacked' | 'percentStacked' | 'standard'
-  /** Any other PptxGenJS chart option. */
-  [option: string]: unknown
 }
 
 export interface MediaProps extends PositionProps {

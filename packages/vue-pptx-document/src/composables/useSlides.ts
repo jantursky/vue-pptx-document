@@ -11,11 +11,13 @@ import {
 } from 'vue'
 
 import type { DeckModel } from '../core/model'
+import { collect, type DiagnosticOptions, type PptxWarning } from '../core/diagnostics'
 import { pptx, type PptxInstance } from '../core/pptx'
+import type { ReactivePropsArgs } from '../core/props'
 
 type Props = Record<string, unknown>
 
-export interface UseSlidesOptions {
+export interface UseSlidesOptions extends DiagnosticOptions {
   /** Milliseconds to wait after a change before resolving the slides again. */
   debounce?: number
 }
@@ -25,6 +27,8 @@ export interface UseSlidesReturn {
   model: Readonly<Ref<DeckModel | null>>
   loading: Readonly<Ref<boolean>>
   error: Readonly<Ref<unknown>>
+  /** The warnings of the latest finished update. */
+  warnings: Readonly<Ref<readonly PptxWarning[]>>
   update: () => Promise<void>
   /** The mounted presentation, for `toBlob()` and friends on the same tree. */
   instance: () => PptxInstance | undefined
@@ -34,15 +38,16 @@ export interface UseSlidesReturn {
  * Resolves `presentation` to its slide model and keeps it current, without writing a file.
  * This is what `<Preview>` runs; use it for thumbnails or a custom viewer.
  */
-export function useSlides(
-  presentation: Component,
-  props?: MaybeRefOrGetter<Props | undefined>,
-  options: UseSlidesOptions = {},
+export function useSlides<C extends Component>(
+  presentation: C,
+  ...[documentProps, options = {}]: ReactivePropsArgs<C, [options?: UseSlidesOptions]>
 ): UseSlidesReturn {
-  const { debounce = 50 } = options
+  const props = documentProps as MaybeRefOrGetter<Props | undefined>
+  const { debounce = 50, ...diagnostics } = options
   const model = shallowRef<DeckModel | null>(null)
   const loading = ref(true)
   const error = shallowRef<unknown>(null)
+  const warnings = shallowRef<readonly PptxWarning[]>([])
   let instance: PptxInstance | undefined
   let stop: (() => void) | undefined
   let disposed = false
@@ -54,21 +59,25 @@ export function useSlides(
     clearTimeout(timer)
     const current = ++run
     loading.value = true
+    const collected = collect(diagnostics)
     try {
-      const result = await instance.toModel()
+      const result = await instance.toModel(collected.options)
       if (current !== run) return
       model.value = result
       error.value = null
     } catch (caught) {
       if (current === run) error.value = caught
     } finally {
-      if (current === run) loading.value = false
+      if (current === run) {
+        loading.value = false
+        warnings.value = collected.warnings
+      }
     }
   }
 
   const start = (): void => {
     if (disposed) return
-    instance = pptx(presentation, props)
+    instance = pptx<Component>(presentation, props)
     stop = instance.onChange(() => {
       clearTimeout(timer)
       timer = setTimeout(() => void update(), debounce)
@@ -92,6 +101,7 @@ export function useSlides(
     model: shallowReadonly(model),
     loading: shallowReadonly(loading),
     error: shallowReadonly(error),
+    warnings: shallowReadonly(warnings),
     update,
     instance: () => instance,
   }

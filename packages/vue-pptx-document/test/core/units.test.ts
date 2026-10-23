@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
 import { isPercent, round, toInches } from '../../src/core/units'
 import { cssColor, normalizeColors, opacity, toHex } from '../../src/core/colors'
@@ -43,6 +43,29 @@ describe('colors', () => {
     expect(toHex(3)).toBeUndefined()
   })
 
+  it('knows every CSS color name and rejects the rest', () => {
+    expect(toHex('lightgray')).toBe('D3D3D3')
+    expect(toHex('Tomato')).toBe('FF6347')
+    expect(toHex('rebeccapurple')).toBe('663399')
+    expect(toHex('not-a-color')).toBeUndefined()
+  })
+
+  it('turns alpha into transparency', () => {
+    expect(normalizeColors({ fill: { color: 'transparent' } })).toEqual({
+      fill: { color: 'FFFFFF', transparency: 100 },
+    })
+    expect(normalizeColors({ color: '11223380' })).toEqual({ color: '112233', transparency: 50 })
+    expect(normalizeColors({ color: '11223380', transparency: 10 })).toEqual({ color: '112233', transparency: 10 })
+    expect(normalizeColors({ highlight: '#ff000080' })).toEqual({ highlight: 'FF0000' })
+  })
+
+  it('drops unknown colors with a warning', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+    expect(normalizeColors({ color: 'bluish', fontSize: 12 })).toEqual({ fontSize: 12 })
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('Unknown color "bluish"'))
+    warn.mockRestore()
+  })
+
   it('walks nested options', () => {
     expect(normalizeColors({ color: '#fff', line: { color: 'black' }, chartColors: ['#f00'], fontSize: 3 })).toEqual({
       color: 'FFFFFF',
@@ -56,6 +79,9 @@ describe('colors', () => {
     expect(cssColor('fff')).toBe('#FFFFFF')
     expect(cssColor(undefined)).toBe('transparent')
     expect(cssColor('accent1')).toBe('#4472C4')
+    expect(cssColor('transparent')).toBe('transparent')
+    expect(cssColor('#11223380')).toBe('rgba(17, 34, 51, 0.5)')
+    expect(cssColor('bluish', '#000000')).toBe('#000000')
     expect(opacity(25)).toBe(0.75)
     expect(opacity(undefined)).toBe(1)
   })

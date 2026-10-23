@@ -4,7 +4,7 @@
     "path": "dist/index.js",
     "ignore": ["vue", "pptxgenjs", "yoga-layout", "jszip", "fast-xml-parser"],
     "gzip": true,
-    "limit": "24 kB"
+    "limit": "26 kB"
   },
   {
     "name": "With PptxGenJS and Yoga, which load on first use",

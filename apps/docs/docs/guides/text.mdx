@@ -111,13 +111,16 @@ Any other prop goes to PptxGenJS's `addText` options as written.
 
 Colors are written as in CSS and normalized to the six-digit hex PptxGenJS writes:
 
-| value                                                | becomes                                              |
-| ---------------------------------------------------- | ---------------------------------------------------- |
-| `#F35815`, `F35815`                                  | `F35815`                                             |
-| `#fff`                                               | `FFFFFF`                                             |
-| `#F3581580`                                          | `F35815`. The alpha is dropped; use `transparency`.  |
-| `white`, `black`, `red`, `gray`, `navy`, `teal`, ... | their hex value. A short list of CSS names is known. |
-| `accent1` to `accent6`, `tx1`, `tx2`, `bg1`, `bg2`   | theme colors, passed through unchanged.              |
+| value                                              | becomes                                                                  |
+| -------------------------------------------------- | ------------------------------------------------------------------------ |
+| `#F35815`, `F35815`                                | `F35815`                                                                 |
+| `#fff`                                             | `FFFFFF`                                                                 |
+| `#F3581580`                                        | `F35815` with `transparency: 50`, unless the object sets `transparency`. |
+| `white`, `lightgray`, `tomato`, ...                | their hex value. All CSS color names are known.                          |
+| `transparent`                                      | `FFFFFF` with `transparency: 100`.                                       |
+| `accent1` to `accent6`, `tx1`, `tx2`, `bg1`, `bg2` | theme colors, passed through unchanged.                                  |
+
+Anything else is dropped with a console warning, so PowerPoint never sees an invalid color. The alpha becomes `transparency` only on `color` props; `highlight` and the `...Color` props keep the color and drop the alpha.
 
 This applies to every prop named `color`, `highlight` or ending in `Color`, at any depth (`:line="{ color: '#ccc' }"`), and to `chart-colors`. `toHex()` is the same function, exported.
 

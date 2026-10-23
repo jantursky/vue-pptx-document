@@ -1,6 +1,7 @@
 import type PptxGenJS from 'pptxgenjs'
 
-import type { Background, DeckModel, SlideObject } from './model'
+import { at, createContext, inContext, locate, warn, type DiagnosticOptions } from './diagnostics'
+import type { Background, DeckModel, SlideModel, SlideObject } from './model'
 
 type Pptx = PptxGenJS
 type Slide = PptxGenJS.Slide
@@ -98,10 +99,23 @@ const masterObject = (object: SlideObject): MasterObject | undefined => {
   }
 }
 
+const NAMES: Record<SlideObject['kind'], string> = {
+  text: '<Text>',
+  shape: '<Shape>',
+  image: '<Image>',
+  table: '<Table>',
+  chart: '<Chart>',
+  media: '<Media>',
+  placeholder: '<Placeholder>',
+}
+
 /** Builds a PptxGenJS presentation from the model. */
-export const toPptxGenJS = async (model: DeckModel): Promise<Pptx> => {
+export const toPptxGenJS = async (model: DeckModel, options: DiagnosticOptions = {}): Promise<Pptx> => {
   const PptxGenJS = await loadPptxGenJS()
-  const deck = new PptxGenJS()
+  return inContext(createContext(options), () => build(new PptxGenJS(), model))
+}
+
+const build = (deck: Pptx, model: DeckModel): Pptx => {
   if (model.layout.name === 'CUSTOM') {
     deck.defineLayout({ name: 'CUSTOM', width: model.layout.width, height: model.layout.height })
   }
@@ -121,7 +135,10 @@ export const toPptxGenJS = async (model: DeckModel): Promise<Pptx> => {
     for (const object of master.objects) {
       const converted = masterObject(object)
       if (converted) objects.push(converted)
-      else console.warn(`[vue-pptx-document] A ${object.kind} can't be part of a master; it is skipped.`)
+      else
+        at({ object: NAMES[object.kind] }, () =>
+          warn('master-object-dropped', `A ${object.kind} can't be part of a master; it is skipped.`),
+        )
     }
     const props: PptxGenJS.SlideMasterProps = { title: master.name, objects }
     const bg = background(master.background)
@@ -132,7 +149,10 @@ export const toPptxGenJS = async (model: DeckModel): Promise<Pptx> => {
   }
 
   const sections = new Set<string>()
-  for (const model_ of model.slides) {
+  model.slides.forEach((model_, index) => at({ slide: index + 1 }, () => addSlide(model_)))
+  return deck
+
+  function addSlide(model_: SlideModel): void {
     if (model_.section && !sections.has(model_.section)) {
       sections.add(model_.section)
       deck.addSection({ title: model_.section })
@@ -146,20 +166,46 @@ export const toPptxGenJS = async (model: DeckModel): Promise<Pptx> => {
     if (model_.color) slide.color = model_.color
     if (model_.hidden) slide.hidden = true
     if (model_.slideNumber) slide.slideNumber = copy(model_.slideNumber)
-    for (const object of model_.objects) add(slide, object)
+    for (const object of model_.objects) at({ object: NAMES[object.kind] }, () => add(slide, object))
     if (model_.notes) slide.addNotes(model_.notes)
   }
-  return deck
 }
 
 export type OutputType = 'blob' | 'arraybuffer' | 'uint8array' | 'base64' | 'nodebuffer'
 
-export interface WriteOptions {
+export interface WriteOptions extends DiagnosticOptions {
   /** Deflate the zip. On by default; turn it off for faster writes of large decks. */
   compression?: boolean
 }
 
+/**
+ * PptxGenJS reads images and media while it writes the zip, so its errors don't say which object
+ * failed. They name the path, though, which finds the object.
+ */
+const locateSource = (error: unknown, model: DeckModel): Error => {
+  const message = error instanceof Error ? error.message : String(error)
+  for (const [index, slide] of model.slides.entries()) {
+    for (const object of slide.objects) {
+      const source =
+        object.kind === 'image'
+          ? object.src
+          : object.kind === 'media'
+            ? (object.options.path ?? object.options.link)
+            : undefined
+      if (typeof source === 'string' && source !== '' && !source.startsWith('data:') && message.includes(source)) {
+        return locate(error, { slide: index + 1, object: NAMES[object.kind] })
+      }
+    }
+  }
+  return locate(error, {})
+}
+
 export const writeModel = async (model: DeckModel, outputType: OutputType, options: WriteOptions = {}) => {
-  const deck = await toPptxGenJS(model)
-  return deck.write({ outputType, compression: options.compression ?? true })
+  const { compression, ...diagnostics } = options
+  const deck = await toPptxGenJS(model, diagnostics)
+  try {
+    return await deck.write({ outputType, compression: compression ?? true })
+  } catch (error) {
+    throw locateSource(error, model)
+  }
 }

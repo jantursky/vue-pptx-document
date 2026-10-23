@@ -1,10 +1,11 @@
 import type PptxGenJS from 'pptxgenjs'
 
 import { normalizeColors } from './colors'
-import { layoutFlex } from './flex'
+import { at, createContext, inContext, warn, type Context, type DiagnosticOptions } from './diagnostics'
+import { layoutFlex, loadYoga, type Yoga } from './flex'
 import { measureText } from './measure'
 import type { DeckLayout, DeckModel, Frame, MasterModel, SlideModel, SlideObject } from './model'
-import { TYPES } from './nodes'
+import { tag, TYPES } from './nodes'
 import { backgroundOf, DRAWABLE, runsOf, tableRows, textOptions, toObject } from './objects'
 import type { TreeNode } from './snapshot'
 import { round, toInches } from './units'
@@ -71,30 +72,25 @@ const absoluteFrame = (node: TreeNode, box: Frame): Frame => {
   return { x: box.x + x, y: box.y + y, w, h }
 }
 
-const warned = new Set<string>()
-const warn = (message: string): void => {
-  if (warned.has(message)) return
-  warned.add(message)
-  console.warn(`[vue-pptx-document] ${message}`)
-}
-
 /** Lays out a slide's (or master's) children: absolutely, or with Yoga for flex containers. */
-const resolveObjects = async (container: TreeNode, box: Frame, flex: boolean): Promise<SlideObject[]> => {
+const resolveObjects = (Y: Yoga | undefined, container: TreeNode, box: Frame, flex: boolean): SlideObject[] => {
   const out: SlideObject[] = []
   if (flex) {
-    await layoutFlex(container, box, out)
+    layoutFlex(needYoga(Y), container, box, out)
     return out.map((object) => ({ ...object, frame: roundFrame(object.frame) }))
   }
   for (const child of container.children) {
     if (typeof child === 'string' || child.type === TYPES.notes || isHidden(child)) continue
-    if (child.type === TYPES.view) {
-      await layoutFlex(child, absoluteFrame(child, box), out)
-    } else if (DRAWABLE.has(child.type)) {
-      const object = toObject(child, absoluteFrame(child, box))
-      if (object) out.push(object)
-    } else {
-      warn(`<${child.type}> can't be placed directly on a slide; it is skipped.`)
-    }
+    at({ object: tag(child.type) }, () => {
+      if (child.type === TYPES.view) {
+        layoutFlex(needYoga(Y), child, absoluteFrame(child, box), out)
+      } else if (DRAWABLE.has(child.type)) {
+        const object = toObject(child, absoluteFrame(child, box))
+        if (object) out.push(object)
+      } else {
+        warn('misplaced-object', `${tag(child.type)} can't be placed directly on a slide; it is skipped.`)
+      }
+    })
   }
   return out.map((object) => ({ ...object, frame: roundFrame(object.frame) }))
 }
@@ -141,8 +137,31 @@ const notesOf = (slide: TreeNode): string | undefined => {
 const defined = <T extends object>(value: T): T =>
   Object.fromEntries(Object.entries(value).filter(([, item]) => item !== undefined)) as T
 
-/** Turns the snapshot of a `<Presentation>` into the resolved model. */
-export const resolve = async (tree: TreeNode): Promise<DeckModel> => {
+const needYoga = (Y: Yoga | undefined): Yoga => {
+  if (!Y) throw new Error('[vue-pptx-document] Yoga is not loaded.')
+  return Y
+}
+
+/** Whether any part of the tree is laid out with flexbox, so Yoga has to load first. */
+const usesFlex = (node: TreeNode): boolean =>
+  node.type === TYPES.view ||
+  node.props.layout === 'flex' ||
+  node.children.some((child) => typeof child !== 'string' && usesFlex(child))
+
+/**
+ * Turns the snapshot of a `<Presentation>` into the resolved model. Warnings go to
+ * `options.onWarn`, or to the console once per message.
+ */
+export const resolve = (tree: TreeNode, options: DiagnosticOptions = {}): Promise<DeckModel> =>
+  resolveIn(createContext(options), tree)
+
+/** `resolve` within a render's diagnostics context. Only the synchronous part runs with it active. */
+export const resolveIn = async (context: Context, tree: TreeNode): Promise<DeckModel> => {
+  const Y = usesFlex(tree) ? await loadYoga() : undefined
+  return inContext(context, () => resolveDeck(Y, tree))
+}
+
+const resolveDeck = (Y: Yoga | undefined, tree: TreeNode): DeckModel => {
   const { props } = tree
   const layout = resolveLayout(props.layout)
   const box: Frame = { x: 0, y: 0, w: layout.width, h: layout.height }
@@ -151,6 +170,10 @@ export const resolve = async (tree: TreeNode): Promise<DeckModel> => {
   for (const child of tree.children) {
     if (typeof child === 'string') continue
     const flex = child.props.layout === 'flex'
+    const slide = child.type === TYPES.slide ? { slide: slides.length + 1 } : { object: '<Master>' }
+    at(slide, () => resolveChild(child, flex))
+  }
+  function resolveChild(child: TreeNode, flex: boolean): void {
     if (child.type === TYPES.master) {
       const name = typeof child.props.name === 'string' ? child.props.name : `MASTER_${masters.length + 1}`
       masters.push(
@@ -159,7 +182,7 @@ export const resolve = async (tree: TreeNode): Promise<DeckModel> => {
           background: backgroundOf(child.props.background),
           margin: child.props.margin as PptxGenJS.Margin | undefined,
           slideNumber: slideNumberOf(child.props.slideNumber, layout),
-          objects: await resolveObjects(child, box, flex),
+          objects: resolveObjects(Y, child, box, flex),
         }),
       )
     } else if (child.type === TYPES.slide) {
@@ -172,18 +195,20 @@ export const resolve = async (tree: TreeNode): Promise<DeckModel> => {
           section: typeof child.props.section === 'string' ? child.props.section : undefined,
           notes: notesOf(child),
           slideNumber: slideNumberOf(child.props.slideNumber, layout),
-          objects: await resolveObjects(child, box, flex),
+          objects: resolveObjects(Y, child, box, flex),
         }),
       )
     } else {
-      warn(`<${child.type}> must be inside a <Slide> or <Master>; it is skipped.`)
+      warn('misplaced-object', `${tag(child.type)} must be inside a <Slide> or <Master>; it is skipped.`)
     }
   }
-  for (const slide of slides) {
+  slides.forEach((slide, index) => {
     if (slide.master && !masters.some((master) => master.name === slide.master)) {
-      warn(`No <Master name="${slide.master}">; the slide uses the default master.`)
+      at({ slide: index + 1 }, () =>
+        warn('unknown-master', `No <Master name="${slide.master}">; the slide uses the default master.`),
+      )
     }
-  }
+  })
   const theme = defined({
     headFontFace:
       (props.headFontFace as string | undefined) ?? (props.theme as PptxGenJS.ThemeProps | undefined)?.headFontFace,
