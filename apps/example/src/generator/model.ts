@@ -53,7 +53,7 @@ export const sampleReport = (): Report => ({
   company: 'Northwind Studio',
   author: 'Ada Novak',
   date: today(),
-  accent: '#F35815',
+  accent: '#42B883',
   logo: null,
   highlights: [
     'Revenue grew 18% over last quarter',

@@ -4,7 +4,7 @@ import { Chart, Presentation, Slide, Text, type ChartSeries, type ComboChart } f
 
 const props = defineProps<{ seed: number }>()
 
-const colors = ['#F35815', '#111111', '#0B6EC5', '#F2B600', '#737373']
+const colors = ['#42B883', '#35495E', '#9FE0BF', '#2A8A62', '#737373']
 const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun']
 
 // A small deterministic generator, so the same seed draws the same charts.
@@ -52,7 +52,7 @@ const combo = computed<ComboChart[]>(() => [
   {
     type: 'line',
     data: [data.value.south],
-    options: { chartColors: ['#F35815'], secondaryValAxis: true, secondaryCatAxis: true },
+    options: { chartColors: ['#42B883'], secondaryValAxis: true, secondaryCatAxis: true },
   },
 ])
 

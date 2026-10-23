@@ -1,15 +1,19 @@
 /*
  * The demo follows the PlanetScale style on Refero (styles.refero.design): one monospace
  * family, an off-white canvas, charcoal text, hairline rules, square cards, tabs and inputs,
- * pill buttons, one orange accent and a blue for links. No shadows, no gradients.
- * The dark palette is derived from the same roles.
+ * pill buttons. The colors are Vue's: green for the accent, a deeper green for links and navy
+ * for the logo. No shadows, no gradients. The dark palette is derived from the same roles.
  */
 
 /* Tokens ------------------------------------------------------------------------------------ */
 
 :root {
-  --ember: #f35815;
-  --signal-blue: #0b6ec5;
+  --vue-green: #42b883;
+  /* Vue green is too light for text on the off-white canvas; this one passes 4.5:1 on the gray bands. */
+  --vue-green-text: #217a55;
+  --vue-navy: #35495e;
+  --mint: #9fe0bf;
+  /* Kept for warnings, which need to read as a warning. */
   --amber: #f2b600;
   --ink: #000000;
   --obsidian: #111111;
@@ -18,6 +22,12 @@
   --fog: #c1c1c1;
   --mist: #e5e5e5;
   --off-white: #fafafa;
+  /* The logo takes Vue's green and navy, not the UI accent. The navy lightens in dark mode. */
+  --logo-mint: #9fe0bf;
+  --logo-green: #42b883;
+  --logo-green-deep: #2a8a62;
+  --logo-navy: #35495e;
+  --logo-navy-deep: #22303f;
 
   --bg: var(--off-white);
   --surface: #ffffff;
@@ -28,18 +38,18 @@
   --muted: #636363;
   --border: var(--fog);
   --border-soft: var(--mist);
-  --link: var(--signal-blue);
+  --link: var(--vue-green-text);
   --inverse-bg: var(--obsidian);
   --inverse-fg: var(--off-white);
   --code-bg: #f3f3f3;
   --field-bg: #ffffff;
-  /* Ember with Obsidian text keeps the pill above 4.5:1; white text on Ember does not. */
-  --primary-bg: var(--ember);
+  /* Obsidian text on Vue green keeps the pill above 4.5:1; white text does not. */
+  --primary-bg: var(--vue-green);
   --primary-fg: var(--obsidian);
   --error: #b42318;
-  --focus: var(--signal-blue);
-  --syntax-keyword: #a3360b;
-  --syntax-string: #0b6ec5;
+  --focus: var(--vue-green-text);
+  --syntax-keyword: #217a55;
+  --syntax-string: #35495e;
   --syntax-name: #000000;
   --syntax-attr: #7a4d00;
   --syntax-number: #8a3ab9;
@@ -67,6 +77,8 @@
 }
 
 :root[data-theme='dark'] {
+  --logo-navy: #6f8cab;
+  --logo-navy-deep: #4a6683;
   --bg: #0b0b0b;
   --surface: #111111;
   --band-alt: #141414;
@@ -75,15 +87,15 @@
   --muted: #9a9a9a;
   --border: #333333;
   --border-soft: #262626;
-  --link: #5aa9ec;
+  --link: #42b883;
   --inverse-bg: #fafafa;
   --inverse-fg: #111111;
   --code-bg: #161616;
   --field-bg: #0f0f0f;
   --error: #ff8a7a;
-  --focus: #5aa9ec;
-  --syntax-keyword: #ff8a5c;
-  --syntax-string: #7cc0f5;
+  --focus: #42b883;
+  --syntax-keyword: #42b883;
+  --syntax-string: #9fb8d1;
   --syntax-name: #fafafa;
   --syntax-attr: #f2c45a;
   --syntax-number: #d6a6ff;
@@ -93,6 +105,8 @@
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
+    --logo-navy: #6f8cab;
+    --logo-navy-deep: #4a6683;
     --bg: #0b0b0b;
     --surface: #111111;
     --band-alt: #141414;
@@ -101,15 +115,15 @@
     --muted: #9a9a9a;
     --border: #333333;
     --border-soft: #262626;
-    --link: #5aa9ec;
+    --link: #42b883;
     --inverse-bg: #fafafa;
     --inverse-fg: #111111;
     --code-bg: #161616;
     --field-bg: #0f0f0f;
     --error: #ff8a7a;
-    --focus: #5aa9ec;
-    --syntax-keyword: #ff8a5c;
-    --syntax-string: #7cc0f5;
+    --focus: #42b883;
+    --syntax-keyword: #42b883;
+    --syntax-string: #9fb8d1;
     --syntax-name: #fafafa;
     --syntax-attr: #f2c45a;
     --syntax-number: #d6a6ff;
@@ -300,7 +314,7 @@ code {
   display: inline-block;
   padding: 0 10px;
   border-radius: var(--radius-pill);
-  background: var(--amber);
+  background: var(--mint);
   color: var(--obsidian);
   font-weight: 600;
 }
@@ -399,7 +413,7 @@ code {
   content: '# ';
 }
 
-/* The headline block: a short Ember bar to the left of the heading. */
+/* The headline block: a short Vue green bar to the left of the heading. */
 .headline {
   position: relative;
   padding-left: var(--space-2);
@@ -412,7 +426,7 @@ code {
   top: 0.2em;
   width: 2px;
   height: 1em;
-  background: var(--ember);
+  background: var(--vue-green);
 }
 
 .section-head {
@@ -908,7 +922,7 @@ input[type='checkbox'],
 input[type='radio'] {
   width: auto;
   min-height: 0;
-  accent-color: var(--ember);
+  accent-color: var(--vue-green);
 }
 
 input[type='color'] {
@@ -1005,7 +1019,7 @@ textarea {
 
 .viewer [data-pptx-preview-notes] {
   padding: var(--space-1);
-  border-left: 2px solid var(--ember);
+  border-left: 2px solid var(--vue-green);
   background: var(--code-bg);
   color: var(--fg);
   white-space: pre-wrap;
@@ -1168,7 +1182,7 @@ textarea {
 }
 
 .dropzone[data-dragging] {
-  border-color: var(--ember);
+  border-color: var(--vue-green);
   border-style: solid;
 }
 

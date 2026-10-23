@@ -17,7 +17,7 @@ import type { Row } from './report'
 
 defineProps<{ rows: Row[]; quarter: string }>()
 
-const status = { 'On track': '#0B6EC5', 'At risk': '#F35815', Done: '#737373' } as const
+const status = { 'On track': '#2A8A62', 'At risk': '#D64545', Done: '#737373' } as const
 </script>
 
 <template>
@@ -34,13 +34,13 @@ const status = { 'On track': '#0B6EC5', 'At risk': '#F35815', Done: '#737373' } 
       background="#FAFAFA"
       :slide-number="{ x: 9, y: 5.2, w: 0.6, h: 0.3, fontSize: 10, color: '#737373' }"
     >
-      <Shape type="rect" :x="0" :y="0" :w="10" :h="0.12" fill="#111111" />
+      <Shape type="rect" :x="0" :y="0" :w="10" :h="0.12" fill="#35495E" />
       <Text :x="0.5" :y="5.2" :w="6" :h="0.3" :font-size="10" color="#737373">Quarterly review · internal</Text>
       <Shape type="line" :x="0.5" :y="5.15" :w="9" :h="0" :line="{ color: '#C1C1C1', width: 0.75 }" />
     </Master>
 
     <Slide master="BRAND" section="Overview">
-      <Shape type="rect" :x="0.5" :y="1.7" :w="0.06" :h="1.2" fill="#F35815" />
+      <Shape type="rect" :x="0.5" :y="1.7" :w="0.06" :h="1.2" fill="#42B883" />
       <Text :x="0.75" :y="1.6" :w="8" :h="0.9" :font-size="40" bold valign="top">Quarterly review</Text>
       <Text :x="0.75" :y="2.45" :w="8" :h="0.5" :font-size="18" color="#414141" valign="top"
         >{{ quarter }} · Product teams</Text
@@ -78,7 +78,7 @@ const status = { 'On track': '#0B6EC5', 'At risk': '#F35815', Done: '#737373' } 
         :font-size="12"
         :border="{ type: 'solid', color: 'C1C1C1', pt: 0.75 }"
       >
-        <TableRow bold color="#FAFAFA" :fill="{ color: '111111' }">
+        <TableRow bold color="#FAFAFA" :fill="{ color: '35495E' }">
           <TableCell>Team</TableCell>
           <TableCell>Owner</TableCell>
           <TableCell>Status</TableCell>

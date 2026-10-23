@@ -32,7 +32,9 @@ const body = '#414141'
 const muted = '#737373'
 const hairline = '#C1C1C1'
 const paper = '#FAFAFA'
-const positive = '#0B6EC5'
+const navy = '#35495E'
+const positive = '#2A8A62'
+const negative = '#D64545'
 
 const highlights = computed(() => props.report.highlights.filter((item) => item.trim() !== ''))
 const kpis = computed(() => props.report.kpis.filter((kpi) => kpi.label.trim() !== '' || kpi.value.trim() !== ''))
@@ -49,7 +51,7 @@ const regions = computed(() => props.report.regions.filter((region) => region.na
 const rows = computed(() => [
   [t.region, t.revenue, t.target, t.ofTarget].map((text) => ({
     text,
-    options: { bold: true, color: paper, fill: { color: ink } },
+    options: { bold: true, color: paper, fill: { color: navy } },
   })),
   ...regions.value.map((region) => {
     const ratio = region.target ? region.revenue / region.target : 0
@@ -59,7 +61,7 @@ const rows = computed(() => [
       { text: number(region.target), options: { align: 'right' as const } },
       {
         text: `${Math.round(ratio * 100)} %`,
-        options: { align: 'right' as const, bold: true, color: ratio >= 1 ? positive : props.report.accent },
+        options: { align: 'right' as const, bold: true, color: ratio >= 1 ? positive : negative },
       },
     ]
   }),
@@ -71,7 +73,7 @@ const share = computed(() => [
     values: regions.value.map((region) => region.revenue),
   },
 ])
-const palette = computed(() => [props.report.accent, ink, muted, hairline, positive, '#F2B600'])
+const palette = computed(() => [props.report.accent, navy, muted, hairline, '#9FE0BF', positive])
 const footer = computed(() => [props.report.company, props.report.title].filter(Boolean).join(' · '))
 </script>
 
@@ -193,7 +195,7 @@ const footer = computed(() => [props.report.company, props.report.title].filter(
           <Text :font-size="32" bold :color="ink" valign="middle" :margin="0" :style="{ flexGrow: 1 }">{{
             kpi.value
           }}</Text>
-          <Text :font-size="12" bold :color="kpi.delta >= 0 ? positive : report.accent" valign="bottom" :margin="0">
+          <Text :font-size="12" bold :color="kpi.delta >= 0 ? positive : negative" valign="bottom" :margin="0">
             {{ kpi.delta >= 0 ? '▲' : '▼' }} {{ Math.abs(kpi.delta) }} % {{ t.vsLast }}
           </Text>
         </View>
@@ -250,7 +252,7 @@ const footer = computed(() => [props.report.company, props.report.title].filter(
       <Notes v-if="report.notes">{{ t.notesRegions }}</Notes>
     </Slide>
 
-    <Slide :background="ink">
+    <Slide :background="navy">
       <Shape type="rect" :x="0.6" :y="size.height / 2 - 0.8" :w="0.06" :h="1.6" :fill="report.accent" />
       <Text
         :x="0.85"

@@ -8,6 +8,13 @@
 
 Create PowerPoint files with Vue 3 components, and turn PowerPoint files back into Vue components. This repository holds the library, a demo app and the docs site.
 
+<a href="https://vue-pptx-document.vercel.app/#generator">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset=".github/assets/generator-dark.png" />
+    <img src=".github/assets/generator-light.png" alt="The demo's report generator: a form for the title, company, date and accent color on the left, and a live preview of the six-slide deck on the right" />
+  </picture>
+</a>
+
 | folder                       | what it is                                                                                        |
 | ---------------------------- | ------------------------------------------------------------------------------------------------- |
 | `packages/vue-pptx-document` | The library, published to npm. Its [README](packages/vue-pptx-document/README.md) covers the API. |
@@ -19,6 +26,20 @@ Create PowerPoint files with Vue 3 components, and turn PowerPoint files back in
 - **Overview**: live previews next to their source. A minimal deck, absolute and flex layouts side by side, every chart type, and a report with a master, sections, notes, bullets and a table. Below them, the headless (`useSlides()` + `usePptx()`), on-demand (`downloadPptx()` behind a dynamic `import()`) and model-to-code patterns.
 - **Report generator** ([`#generator`](https://vue-pptx-document.vercel.app/#generator)): a six-slide business review from one template, `apps/example/src/generator/ReportTemplate.vue`. Title, highlights, KPI cards in a flex row, a revenue chart, a table next to a doughnut and a closing slide, on a master with a footer and slide numbers. An accent color, a logo, three slide sizes, speaker notes, a draft saved in `localStorage`, JSON export and import, and **Export Vue code**, which writes the current deck out as a standalone component.
 - **Import .pptx** ([`#import`](https://vue-pptx-document.vercel.app/#import)): drop a PowerPoint file and get thumbnails of its slides and the Vue component that renders them. The file is read in the browser and never uploaded.
+
+<a href="https://vue-pptx-document.vercel.app/">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset=".github/assets/overview-dark.png" />
+    <img src=".github/assets/overview-light.png" alt="The demo's overview tab: the headline, the install command and a HelloDeck.vue component written with Presentation, Slide, Shape and Text" />
+  </picture>
+</a>
+
+<a href="https://vue-pptx-document.vercel.app/#import">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset=".github/assets/import-dark.png" />
+    <img src=".github/assets/import-light.png" alt="The demo's import tab: thumbnails of six slides read from a .pptx file next to the Vue component generated from them" />
+  </picture>
+</a>
 
 ## How it works
 

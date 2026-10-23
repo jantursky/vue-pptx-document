@@ -3,7 +3,7 @@ import { Presentation, Shape, Slide, Text, View } from 'vue-pptx-document'
 
 const props = defineProps<{ cards: string[]; direction: 'row' | 'column' }>()
 
-const accent = '#F35815'
+const accent = '#42B883'
 </script>
 
 <template>

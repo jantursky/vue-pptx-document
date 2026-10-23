@@ -96,10 +96,17 @@ const nextTheme = () => {
   <header class="nav">
     <div class="container nav-inner">
       <a class="brand" href="/">
-        <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true">
-          <rect x="4" y="7" width="24" height="18" fill="none" stroke="currentColor" stroke-width="2" />
-          <rect x="8" y="11" width="12" height="3" style="fill: var(--ember)" />
-          <rect x="8" y="17" width="8" height="2" fill="currentColor" />
+        <svg class="brand-mark" viewBox="0 0 64 64" aria-hidden="true">
+          <rect x="20" y="6" width="40" height="30" rx="7" style="fill: var(--logo-mint)" />
+          <rect x="12" y="17" width="40" height="30" rx="7" style="fill: var(--logo-green)" />
+          <path d="M20 17h25a7 7 0 0 1 7 7v12H27a7 7 0 0 1-7-7z" style="fill: var(--logo-green-deep)" />
+          <rect x="4" y="28" width="40" height="30" rx="7" style="fill: var(--logo-navy)" />
+          <path d="M12 28h25a7 7 0 0 1 7 7v12H19a7 7 0 0 1-7-7z" style="fill: var(--logo-navy-deep)" />
+          <g fill="#fff">
+            <rect x="10" y="44" width="5" height="8" rx="1.5" />
+            <rect x="18" y="39" width="5" height="13" rx="1.5" />
+            <rect x="26" y="34" width="5" height="18" rx="1.5" />
+          </g>
         </svg>
         vue-pptx-document
         <span class="version">{{ version }}</span>
