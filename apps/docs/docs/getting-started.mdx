@@ -13,6 +13,10 @@ vue-pptx-document
 
 It needs Vue `^3.5` and Node 20.19 or newer for server use. The package is ESM only. It brings PptxGenJS 4 (with JSZip), `yoga-layout` for flexbox, and `fast-xml-parser` for the importer. PptxGenJS loads on the first write and Yoga on the first flex layout, both through `import()`, so a page that only previews slides never downloads the writer.
 
+## PptxGenJS and this package
+
+PptxGenJS writes the `.pptx` file from slide objects you build in JavaScript. vue-pptx-document sits on top of it: you write Vue components, and the package builds the PptxGenJS input from them, including flexbox layout. Use PptxGenJS directly when you prefer to build slide objects by hand; use this package when the deck should be a component with props and reactivity.
+
 ## Write a deck
 
 A deck is an ordinary component whose template starts with `<Presentation>`. Every object takes `x`, `y`, `w` and `h`, in inches by default:

@@ -6,7 +6,7 @@
 
 [Docs](https://vue-pptx-document-docs.vercel.app) · [Demo](https://vue-pptx-document.vercel.app) · [Changelog](https://github.com/jantursky/vue-pptx-document/blob/main/packages/vue-pptx-document/CHANGELOG.md) · [GitHub](https://github.com/jantursky/vue-pptx-document)
 
-Create PowerPoint files with Vue 3 components. Write `<Presentation>`, `<Slide>`, `<Text>`, `<Shape>`, `<Image>`, `<Chart>` and `<Table>` in a template, with props, `v-for`, `v-if` and computed values, and get an editable .pptx, in the browser or in Node.
+A Vue PowerPoint library: create PowerPoint files with Vue 3 components. Write `<Presentation>`, `<Slide>`, `<Text>`, `<Shape>`, `<Image>`, `<Chart>` and `<Table>` in a template, with props, `v-for`, `v-if` and computed values, and get an editable .pptx, in the browser or in Node.
 
 Under the hood it's a custom Vue renderer (`createRenderer`) that builds a plain tree of slides and objects. The tree is resolved to frames in inches, laid out with [Yoga](https://yogalayout.dev) where you ask for flexbox, and handed to [PptxGenJS](https://gitbrent.github.io/PptxGenJS/) to write the file. The same resolved tree drives `<Preview>`, an HTML and SVG rendering of the slides, so you can show the deck as people edit it without writing a file.
 
