@@ -4,6 +4,12 @@ All notable changes to `vue-pptx-document` are listed here. The format follows [
 
 ## [Unreleased]
 
+## [1.1.2] - 2026-10-24
+
+### Fixed
+
+- The `vue-pptx-document` command's path in `package.json` no longer triggers npm's "script name was invalid and removed" warning on publish.
+
 ## [1.1.1] - 2026-10-24
 
 ### Changed
@@ -47,7 +53,8 @@ All notable changes to `vue-pptx-document` are listed here. The format follows [
 - `vue-pptx-document/import`: `pptxToVue()`, `parsePptx()` and `modelToVue()` read a .pptx (runs, bullets, shapes, groups, pictures, tables, charts, theme colors, backgrounds, layouts and masters, sections, notes, slide numbers) and write a Vue component that renders it.
 - A `vue-pptx-document import deck.pptx -o Deck.vue` command line.
 
-[Unreleased]: https://github.com/jantursky/vue-pptx-document/compare/1.1.1...HEAD
+[Unreleased]: https://github.com/jantursky/vue-pptx-document/compare/1.1.2...HEAD
+[1.1.2]: https://github.com/jantursky/vue-pptx-document/compare/1.1.1...1.1.2
 [1.1.1]: https://github.com/jantursky/vue-pptx-document/compare/1.1.0...1.1.1
 [1.1.0]: https://github.com/jantursky/vue-pptx-document/compare/1.0.0...1.1.0
 [1.0.0]: https://github.com/jantursky/vue-pptx-document/releases/tag/1.0.0
