@@ -4,6 +4,12 @@ All notable changes to `vue-pptx-document` are listed here. The format follows [
 
 ## [Unreleased]
 
+## [1.1.1] - 2026-10-24
+
+### Changed
+
+- The README on npm shows the demo screenshots and the new logo.
+
 ## [1.1.0] - 2026-10-23
 
 ### Added
@@ -41,6 +47,7 @@ All notable changes to `vue-pptx-document` are listed here. The format follows [
 - `vue-pptx-document/import`: `pptxToVue()`, `parsePptx()` and `modelToVue()` read a .pptx (runs, bullets, shapes, groups, pictures, tables, charts, theme colors, backgrounds, layouts and masters, sections, notes, slide numbers) and write a Vue component that renders it.
 - A `vue-pptx-document import deck.pptx -o Deck.vue` command line.
 
-[Unreleased]: https://github.com/jantursky/vue-pptx-document/compare/1.1.0...HEAD
+[Unreleased]: https://github.com/jantursky/vue-pptx-document/compare/1.1.1...HEAD
+[1.1.1]: https://github.com/jantursky/vue-pptx-document/compare/1.1.0...1.1.1
 [1.1.0]: https://github.com/jantursky/vue-pptx-document/compare/1.0.0...1.1.0
 [1.0.0]: https://github.com/jantursky/vue-pptx-document/releases/tag/1.0.0

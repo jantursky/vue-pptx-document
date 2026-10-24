@@ -1,6 +1,6 @@
 {
   "name": "vue-pptx-document",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Create PowerPoint files with Vue 3 components: a custom Vue renderer on top of PptxGenJS, with absolute or flexbox (Yoga) layout and a live HTML preview.",
   "license": "MIT",
   "author": {
