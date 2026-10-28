@@ -1,4 +1,6 @@
-<p align="center"><img src="https://raw.githubusercontent.com/jantursky/vue-pptx-document/main/apps/docs/public/icon.svg" alt="" width="64" height="64" /></p>
+<p align="center">
+  <img src="https://raw.githubusercontent.com/jantursky/vue-pptx-document/main/.github/assets/banner.svg" alt="Vue PPTX Document: powerpoint files from vue components" width="420">
+</p>
 
 # vue-pptx-document
 
