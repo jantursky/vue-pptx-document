@@ -4,6 +4,20 @@ All notable changes to `vue-pptx-document` are listed here. The format follows [
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-11-06
+
+### Added
+
+- `<Preview>` draws only the slides near the viewport by default; the others are empty boxes with the slide's aspect ratio. Pass `:lazy="false"` to draw every slide at once. The browser's `beforeprint` event draws the rest.
+- `<SlidePreview>` also takes `slide`, `masters`, `layout` and `theme` in place of `model`, and is not drawn again while those objects stay the same.
+- `bun run bench` times resolving, laying out and previewing a 100-slide deck.
+- A size budget for the preview components (27 kB gzipped). The library's own budget is 28 kB (was 26 kB); it measures 26 kB with this release.
+
+### Changed
+
+- `useSlides()` keeps the previous slide, master and layout objects whenever their content is unchanged, so `model.slides[i] === previous.slides[i]` for slides an update did not touch. `<Preview>` redraws only the slides that changed.
+- Text measurement caches widths per font and word, and sets the canvas font only when it changes. The Node estimate uses a lookup table. Web fonts finishing to load clear the cache and measure again.
+
 ## [1.1.3] - 2026-10-24
 
 ### Changed
@@ -59,7 +73,8 @@ All notable changes to `vue-pptx-document` are listed here. The format follows [
 - `vue-pptx-document/import`: `pptxToVue()`, `parsePptx()` and `modelToVue()` read a .pptx (runs, bullets, shapes, groups, pictures, tables, charts, theme colors, backgrounds, layouts and masters, sections, notes, slide numbers) and write a Vue component that renders it.
 - A `vue-pptx-document import deck.pptx -o Deck.vue` command line.
 
-[Unreleased]: https://github.com/jantursky/vue-pptx-document/compare/1.1.3...HEAD
+[Unreleased]: https://github.com/jantursky/vue-pptx-document/compare/1.2.0...HEAD
+[1.2.0]: https://github.com/jantursky/vue-pptx-document/compare/1.1.3...1.2.0
 [1.1.3]: https://github.com/jantursky/vue-pptx-document/compare/1.1.2...1.1.3
 [1.1.2]: https://github.com/jantursky/vue-pptx-document/compare/1.1.1...1.1.2
 [1.1.1]: https://github.com/jantursky/vue-pptx-document/compare/1.1.0...1.1.1
