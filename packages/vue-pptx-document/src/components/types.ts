@@ -95,7 +95,10 @@ export interface ShapeProps extends PositionProps {
 export interface ImageProps extends PositionProps {
   /** A URL, a path (in Node) or a data URI. */
   src: string
+  /** What the image shows, for screen readers. */
   altText?: string
+  /** Marks the image as decoration, with an empty description. Images without `altText` are too. */
+  decorative?: boolean
   sizing?: PptxGenJS.ImageProps['sizing']
   rounding?: boolean
   rotate?: number
@@ -123,6 +126,8 @@ export interface TableProps extends PositionProps {
   valign?: PptxGenJS.VAlign
   /** Cell margin in inches, as PptxGenJS reads it for tables. */
   margin?: number | [number, number, number, number]
+  /** How many rows from the top are headers, flagged as such in the file and in the preview. */
+  headerRows?: number
   autoPage?: boolean
   autoPageRepeatHeader?: boolean
   autoPageHeaderRows?: number
@@ -151,6 +156,8 @@ export interface ChartProps
   type: ChartType | ComboChart[]
   data?: ChartSeries[]
   chartColors?: Color[]
+  /** The chart's description for screen readers; the preview also labels it with its title. */
+  altText?: string
 }
 
 export interface MediaProps extends PositionProps {
@@ -184,6 +191,8 @@ export interface SlideProps {
   /** Default text color. */
   color?: Color
   hidden?: boolean
+  /** Names the slide for screen readers in the preview: "Slide 4: Revenue". */
+  title?: string
   /** The `name` of a `<Master>`. */
   master?: string
   /** Starts or continues a section with this title. */
@@ -214,6 +223,8 @@ export interface PresentationProps {
   /** `16x9` (10 x 5.625 in, the default), `16x10`, `4x3`, `wide`, or a custom size. */
   layout?: LayoutName | { width: Length; height: Length }
   title?: string
+  /** The default language of the text, as a BCP 47 tag such as `en-US`. A run's own `lang` wins. */
+  lang?: string
   author?: string
   company?: string
   subject?: string

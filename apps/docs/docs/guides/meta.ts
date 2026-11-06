@@ -12,6 +12,7 @@ export default defineMeta({
     'sections-and-notes',
     'preview',
     'download',
+    'accessibility',
     'import',
     'server',
     'migrating-from-react-pptx',

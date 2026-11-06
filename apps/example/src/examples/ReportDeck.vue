@@ -24,6 +24,7 @@ const status = { 'On track': '#2A8A62', 'At risk': '#D64545', Done: '#737373' } 
   <Presentation
     title="Quarterly review"
     author="vue-pptx-document"
+    lang="en-US"
     layout="16x9"
     head-font-face="Arial"
     body-font-face="Arial"
@@ -68,13 +69,14 @@ const status = { 'On track': '#2A8A62', 'At risk': '#D64545', Done: '#737373' } 
       <Notes>Keep this one short.</Notes>
     </Slide>
 
-    <Slide master="BRAND" section="Details">
+    <Slide master="BRAND" section="Details" title="Status by team">
       <Text :x="0.5" :y="0.4" :w="9" :h="0.6" :font-size="24" bold valign="top">Status by team</Text>
       <Table
         :x="0.5"
         :y="1.15"
         :w="9"
         :col-w="[3.5, 3.5, 2]"
+        :header-rows="1"
         :font-size="12"
         :border="{ type: 'solid', color: 'C1C1C1', pt: 0.75 }"
       >

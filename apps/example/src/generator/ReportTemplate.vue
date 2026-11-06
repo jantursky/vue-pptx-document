@@ -83,6 +83,7 @@ const footer = computed(() => [props.report.company, props.report.title].filter(
     :title="report.title"
     :author="report.author"
     :company="report.company"
+    lang="en-US"
     head-font-face="Arial"
     body-font-face="Arial"
   >
@@ -119,6 +120,7 @@ const footer = computed(() => [props.report.company, props.report.title].filter(
       <Image
         v-if="report.logo"
         :src="report.logo"
+        :alt-text="`${report.title} logo`"
         :x="size.width - 1.7"
         :y="0.45"
         :w="1.2"
@@ -169,6 +171,7 @@ const footer = computed(() => [props.report.company, props.report.title].filter(
     <!-- Highlights: flex, so the list fills whatever space the layout leaves. -->
     <Slide
       v-if="highlights.length"
+      :title="t.highlights"
       master="REPORT"
       layout="flex"
       :style="{ padding: 0.6, paddingBottom: 0.8, gap: 0.3 }"
@@ -181,7 +184,13 @@ const footer = computed(() => [props.report.company, props.report.title].filter(
     </Slide>
 
     <!-- Metrics: one card per KPI in a flex row. -->
-    <Slide v-if="kpis.length" master="REPORT" layout="flex" :style="{ padding: 0.6, paddingBottom: 0.8, gap: 0.3 }">
+    <Slide
+      v-if="kpis.length"
+      :title="t.metrics"
+      master="REPORT"
+      layout="flex"
+      :style="{ padding: 0.6, paddingBottom: 0.8, gap: 0.3 }"
+    >
       <Text :font-size="28" bold :color="ink" valign="top" :margin="0">{{ t.metrics }}</Text>
       <View :style="{ flexDirection: 'row', gap: 0.25, flexGrow: 1, alignItems: 'center' }">
         <View
@@ -203,11 +212,18 @@ const footer = computed(() => [props.report.company, props.report.title].filter(
       <Notes v-if="report.notes">{{ t.notesMetrics }}</Notes>
     </Slide>
 
-    <Slide v-if="series.length" master="REPORT" layout="flex" :style="{ padding: 0.6, paddingBottom: 0.8, gap: 0.2 }">
+    <Slide
+      v-if="series.length"
+      :title="t.trend"
+      master="REPORT"
+      layout="flex"
+      :style="{ padding: 0.6, paddingBottom: 0.8, gap: 0.2 }"
+    >
       <Text :font-size="28" bold :color="ink" valign="top" :margin="0">{{ t.trend }}</Text>
       <Chart
         :type="report.chart"
         :data="series"
+        :alt-text="`${t.trend}: ${t.revenue} (${t.thousands})`"
         :chart-colors="palette"
         show-legend
         legend-pos="b"
@@ -225,11 +241,18 @@ const footer = computed(() => [props.report.company, props.report.title].filter(
       <Notes v-if="report.notes">{{ t.notesTrend }}</Notes>
     </Slide>
 
-    <Slide v-if="regions.length" master="REPORT" layout="flex" :style="{ padding: 0.6, paddingBottom: 0.8, gap: 0.3 }">
+    <Slide
+      v-if="regions.length"
+      :title="t.regions"
+      master="REPORT"
+      layout="flex"
+      :style="{ padding: 0.6, paddingBottom: 0.8, gap: 0.3 }"
+    >
       <Text :font-size="28" bold :color="ink" valign="top" :margin="0">{{ t.regions }}</Text>
       <View :style="{ flexDirection: 'row', gap: 0.4, flexGrow: 1 }">
         <Table
           :rows="rows"
+          :header-rows="1"
           :font-size="12"
           :color="body"
           :border="{ type: 'solid', color: 'C1C1C1', pt: 0.75 }"
@@ -238,6 +261,7 @@ const footer = computed(() => [props.report.company, props.report.title].filter(
         <Chart
           type="doughnut"
           :data="share"
+          :alt-text="t.regions"
           :chart-colors="palette"
           :hole-size="58"
           show-percent

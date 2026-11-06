@@ -793,6 +793,54 @@ const renderCartesian = (parts: Part[], base: Options, box: Box, out: VNode[]): 
   }
 }
 
+const chartName = (object: ChartObject): string => (Array.isArray(object.type) ? 'combo' : object.type)
+
+/** What a screen reader hears for the chart: the author's description, or its title and type. */
+const chartLabel = (object: ChartObject): string => {
+  const options = object.options as Options
+  if (typeof options.altText === 'string' && options.altText) return options.altText
+  const type = `${chartName(object)} chart`
+  return typeof options.title === 'string' && options.title ? `${options.title}, ${type}` : type
+}
+
+const VISUALLY_HIDDEN = {
+  position: 'absolute',
+  width: '1px',
+  height: '1px',
+  margin: '-1px',
+  padding: 0,
+  overflow: 'hidden',
+  clip: 'rect(0 0 0 0)',
+  whiteSpace: 'nowrap',
+  border: 0,
+}
+
+/** The chart's series and values as a table that only assistive technology sees. */
+export const renderChartTable = (object: ChartObject): VNode => {
+  const series = Array.isArray(object.type) ? object.type.flatMap((part) => part.data) : object.data
+  const categories = series.find((item) => item.labels?.length)?.labels ?? []
+  const columns = Math.max(categories.length, ...series.map((item) => item.values?.length ?? 0))
+  const headings = Array.from({ length: columns }, (_, index) => categories[index] ?? String(index + 1))
+  return h('table', { 'data-pptx-chart-data': '', style: VISUALLY_HIDDEN }, [
+    h('caption', chartLabel(object)),
+    h('thead', [
+      h('tr', [
+        h('th', { scope: 'col' }, ''),
+        ...headings.map((heading, index) => h('th', { key: index, scope: 'col' }, heading)),
+      ]),
+    ]),
+    h(
+      'tbody',
+      series.map((item, row) =>
+        h('tr', { key: row }, [
+          h('th', { scope: 'row' }, item.name ?? `Series ${row + 1}`),
+          ...headings.map((_, index) => h('td', { key: index }, String(item.values?.[index] ?? ''))),
+        ]),
+      ),
+    ),
+  ])
+}
+
 /** Draws a chart as SVG in a viewBox measured in points. */
 export const renderChart = (object: ChartObject, fontFace?: string): VNode => {
   const width = Math.max(object.frame.w * PT_PER_IN, 1)
@@ -815,7 +863,7 @@ export const renderChart = (object: ChartObject, fontFace?: string): VNode => {
     renderPie(first, options, box, out)
   else if (first && parts.length === 1 && first.type === 'radar') renderRadar(first, options, box, out)
   else if (first) renderCartesian(parts, options, box, out)
-  const name = Array.isArray(object.type) ? 'combo' : object.type
+  const name = chartName(object)
   return h(
     'svg',
     {
@@ -823,9 +871,7 @@ export const renderChart = (object: ChartObject, fontFace?: string): VNode => {
       width: '100%',
       height: '100%',
       role: 'img',
-      'aria-label':
-        (options.altText as string | undefined) ??
-        (typeof options.title === 'string' ? options.title : `${name} chart`),
+      'aria-label': chartLabel(object),
       'data-chart': name,
       'font-family': `${JSON.stringify(fontFace ?? 'Arial')}, Arial, sans-serif`,
       style: { display: 'block', overflow: 'visible' },

@@ -148,7 +148,7 @@ onBeforeUnmount(() => {
         </div>
         <figcaption data-pptx-preview-caption>
           <slot name="caption" :index="index" :total="model.slides.length" :model="model">
-            {{ index + 1 }} / {{ model.slides.length }}
+            Slide {{ index + 1 }} of {{ model.slides.length }}
           </slot>
           <p v-if="notes && model.slides[index]?.notes" data-pptx-preview-notes>{{ model.slides[index]?.notes }}</p>
         </figcaption>

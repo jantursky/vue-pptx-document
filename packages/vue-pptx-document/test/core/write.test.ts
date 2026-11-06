@@ -1,8 +1,10 @@
 import { describe, expect, it, vi } from 'vitest'
+import JSZip from 'jszip'
 import { defineComponent, h, nextTick, ref } from 'vue'
 
 import {
   Chart,
+  Image,
   Master,
   Notes,
   Presentation,
@@ -165,5 +167,78 @@ describe('pptx()', () => {
     const instance = pptx(defineComponent(() => () => h(Slide)))
     await expect(instance.toModel()).rejects.toThrow('<Presentation>')
     instance.unmount()
+  })
+})
+
+describe('accessible output', () => {
+  const PNG =
+    'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFBQIAX8jx0gAAAABJRU5ErkJggg=='
+  const write = async (children: () => unknown, props: Record<string, unknown> = {}) => {
+    const bytes = await renderToBuffer(
+      defineComponent(() => () => h(Presentation, props, () => h(Slide, null, children as never))),
+    )
+    return (await unzip(bytes))['ppt/slides/slide1.xml']!
+  }
+
+  it('sets the deck language on runs that have none', async () => {
+    const xml = await write(
+      () => [
+        h(Text, { x: 0, y: 0, w: 3, h: 1 }, () => 'Plain'),
+        h(Text, { x: 0, y: 1, w: 3, h: 1, lang: 'en-US' }, () => 'Own'),
+        h(Table, { x: 0, y: 2, w: 3, rows: [['Cell']] }),
+      ],
+      { lang: 'sk-SK' },
+    )
+    expect(xml).toMatch(/<a:rPr lang="sk-SK"[^>]*>(?:(?!<\/a:r>).)*<a:t>Plain<\/a:t>/)
+    expect(xml).toMatch(/<a:rPr lang="en-US"[^>]*>(?:(?!<\/a:r>).)*<a:t>Own<\/a:t>/)
+    expect(xml).toMatch(/<a:rPr lang="sk-SK"[^>]*>(?:(?!<\/a:r>).)*<a:t>Cell<\/a:t>/)
+  })
+
+  it('flags the header row of a table', async () => {
+    const xml = await write(() => [
+      h(Table, { x: 0, y: 0, w: 3, rows: [['A'], ['1']], headerRows: 1, objectName: 'Results' }),
+      h(Table, { x: 0, y: 3, w: 3, rows: [['B']] }),
+    ])
+    expect(xml.match(/<a:tblPr firstRow="1"/g)).toHaveLength(1)
+    expect(xml).toContain('name="Results"')
+    expect(xml).not.toContain('pptx-a11y')
+  })
+
+  it('describes an image without alt text with nothing, never its data', async () => {
+    const xml = await write(() => [
+      h(Image, { src: PNG, x: 0, y: 0, w: 1, h: 1 }),
+      h(Image, { src: PNG, x: 1, y: 0, w: 1, h: 1, altText: 'A logo' }),
+      h(Image, { src: PNG, x: 2, y: 0, w: 1, h: 1, altText: 'Ignored', decorative: true }),
+    ])
+    const descriptions = [...xml.matchAll(/<p:cNvPr id="\d+" name="[^"]+" descr="([^"]*)"/g)].map(([, text]) => text)
+    expect(descriptions).toEqual(['', 'A logo', ''])
+    expect(xml).not.toContain('pptx-a11y')
+    expect(xml).not.toContain('base64')
+  })
+
+  it('writes the description of a chart', async () => {
+    const xml = await write(() =>
+      h(Chart, {
+        type: 'bar',
+        x: 0,
+        y: 0,
+        w: 4,
+        h: 3,
+        altText: 'Sales by quarter',
+        data: [{ name: 'A', labels: ['Q1'], values: [1] }],
+      }),
+    )
+    expect(xml).toContain('descr="Sales by quarter"')
+  })
+
+  it('opens the zip only when something needs a fix', async () => {
+    const render = (children: () => unknown) =>
+      renderToBuffer(defineComponent(() => () => h(Presentation, null, () => h(Slide, null, children as never))))
+    const spy = vi.spyOn(JSZip, 'loadAsync')
+    await render(() => h(Text, { x: 0, y: 0, w: 3, h: 1 }, () => 'Nothing to fix'))
+    expect(spy).not.toHaveBeenCalled()
+    await render(() => h(Image, { src: PNG, x: 0, y: 0, w: 1, h: 1 }))
+    expect(spy).toHaveBeenCalledTimes(1)
+    spy.mockRestore()
   })
 })

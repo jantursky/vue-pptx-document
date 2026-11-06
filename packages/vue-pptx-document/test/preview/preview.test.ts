@@ -2,7 +2,19 @@ import { mount } from '@vue/test-utils'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { defineComponent, h } from 'vue'
 
-import { Chart, Paragraph, Preview, Presentation, Shape, Slide, SlidePreview, Text, renderToModel } from '../../src'
+import {
+  Chart,
+  Image,
+  Paragraph,
+  Preview,
+  Presentation,
+  Shape,
+  Slide,
+  SlidePreview,
+  Table,
+  Text,
+  renderToModel,
+} from '../../src'
 import type { ChartName } from '../../src'
 import { formatNumber, niceScale } from '../../src/preview/chart'
 import { isKnownShape, shapePath } from '../../src/preview/shapes'
@@ -222,5 +234,66 @@ describe('large decks', () => {
     await until(() => wrapper.findAll('[data-pptx-slide]').length === 3)
     expect(wrapper.findAll('[data-pptx-slide-placeholder]')).toHaveLength(0)
     wrapper.unmount()
+  })
+})
+
+describe('accessible preview', () => {
+  it('labels a slide with its title and a caption with its position', async () => {
+    const Titled = defineComponent(
+      () => () =>
+        h(Presentation, null, () => [
+          h(Slide, { title: 'Revenue' }, () => h(Text, { x: 0, y: 0, w: 3, h: 1 }, () => 'A')),
+          h(Slide, null, () => h(Text, { x: 0, y: 0, w: 3, h: 1 }, () => 'B')),
+        ]),
+    )
+    const wrapper = mount(Preview, { props: { document: Titled, debounce: 0, lazy: false } })
+    await vi.waitFor(() => expect(wrapper.findAll('[data-pptx-slide]')).toHaveLength(2))
+    const labels = wrapper.findAll('[data-pptx-slide]').map((node) => node.attributes('aria-label'))
+    expect(labels).toEqual(['Slide 1: Revenue', 'Slide 2'])
+    expect(wrapper.findAll('figcaption').map((node) => node.text())).toEqual(['Slide 1 of 2', 'Slide 2 of 2'])
+    wrapper.unmount()
+  })
+
+  it('renders header rows as column headers', async () => {
+    const wrapper = await draw(() =>
+      h(Table, {
+        x: 0,
+        y: 0,
+        w: 4,
+        rows: [
+          ['Name', 'Score'],
+          ['Ada', '9'],
+        ],
+        headerRows: 1,
+      }),
+    )
+    expect(wrapper.findAll('thead th').map((node) => node.attributes('scope'))).toEqual(['col', 'col'])
+    expect(wrapper.findAll('tbody td').map((node) => node.text())).toEqual(['Ada', '9'])
+    expect(wrapper.find('tbody th').exists()).toBe(false)
+  })
+
+  it('labels a chart and gives it a hidden data table', async () => {
+    const wrapper = await draw(() => h(Chart, { type: 'bar', x: 0, y: 0, w: 6, h: 3, title: 'Sales', data: series }))
+    const svg = wrapper.find('svg')
+    expect(svg.attributes('role')).toBe('img')
+    expect(svg.attributes('aria-label')).toBe('Sales, bar chart')
+    const table = wrapper.find('table[data-pptx-chart-data]')
+    expect(table.findAll('thead th').map((node) => node.text())).toEqual(['', 'Q1', 'Q2', 'Q3'])
+    expect(table.findAll('tbody tr').map((row) => row.text())).toEqual(['North354', 'South216'])
+  })
+
+  it('prefers the described alt text and hides images without any', async () => {
+    const PNG =
+      'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFBQIAX8jx0gAAAABJRU5ErkJggg=='
+    const wrapper = await draw(() => [
+      h(Chart, { type: 'bar', x: 0, y: 0, w: 4, h: 2, altText: 'Sales by quarter', data: series }),
+      h(Image, { src: PNG, x: 0, y: 3, w: 1, h: 1 }),
+      h(Image, { src: PNG, x: 2, y: 3, w: 1, h: 1, altText: 'Logo' }),
+    ])
+    expect(wrapper.find('svg').attributes('aria-label')).toBe('Sales by quarter')
+    const [bare, described] = wrapper.findAll('img')
+    expect(bare!.attributes('aria-hidden')).toBe('true')
+    expect(described!.attributes()).toMatchObject({ alt: 'Logo' })
+    expect(described!.attributes('aria-hidden')).toBeUndefined()
   })
 })

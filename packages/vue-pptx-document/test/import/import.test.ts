@@ -188,6 +188,31 @@ describe('codegen', () => {
   })
 })
 
+describe('accessibility round trip', () => {
+  const Accessible = defineComponent(
+    () => () =>
+      h(Presentation, null, () =>
+        h(Slide, null, () => [
+          h(Image, { src: PIXEL, x: 0, y: 0, w: 1, h: 1 }),
+          h(Image, { src: PIXEL, x: 2, y: 0, w: 1, h: 1, altText: 'A logo' }),
+          h(Table, { x: 0, y: 2, w: 4, rows: [['Head'], ['Body']], headerRows: 1 }),
+        ]),
+      ),
+  )
+
+  it('reads the header row and decorative images back, and writes them as code', async () => {
+    const { model } = await parsePptx(await renderToBuffer(Accessible))
+    const [decorative, described, table] = model.slides[0]!.objects
+    expect(decorative!.options).toMatchObject({ decorative: true })
+    expect(described!.options).toMatchObject({ altText: 'A logo' })
+    expect(described!.options).not.toHaveProperty('decorative')
+    expect(table!.options).toMatchObject({ headerRows: 1 })
+    const code = modelToVue(model)
+    expect(code).toMatch(/<Image[^>]*decorative/)
+    expect(code).toMatch(/<Table[^>]*:header-rows="1"|<Table[^>]*header-rows="1"/)
+  })
+})
+
 describe('CLI', () => {
   it('converts a file and prints help', async () => {
     const dir = mkdtempSync(join(tmpdir(), 'vue-pptx-'))

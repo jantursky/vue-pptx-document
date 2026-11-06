@@ -64,7 +64,7 @@ describe('Preview', () => {
     wrappers.push(wrapper)
     expect(wrapper.text()).toBe('Rendering…')
     await until(() => wrapper.find('[data-pptx-preview-slide]').exists())
-    expect(wrapper.find('[data-pptx-preview-caption]').text()).toContain('1 / 1')
+    expect(wrapper.find('[data-pptx-preview-caption]').text()).toContain('Slide 1 of 1')
     expect(wrapper.find('[data-pptx-preview-notes]').text()).toBe('Remember this')
     expect(wrapper.attributes('aria-label')).toBe('Presentation preview')
   })
@@ -102,29 +102,56 @@ describe('Preview', () => {
 })
 
 describe('PptxDownloadButton', () => {
-  it('renders and saves the file on click', async () => {
+  it('renders and saves the file on click, announcing both steps', async () => {
     const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {})
-    const wrapper = mount(PptxDownloadButton, { props: { document: Deck, fileName: 'deck.pptx' } })
+    const wrapper = mount(PptxDownloadButton, {
+      props: { document: Deck, fileName: 'deck.pptx' },
+      attrs: { class: 'mine' },
+    })
     wrappers.push(wrapper)
-    expect(wrapper.text()).toBe('Download PPTX')
-    await wrapper.trigger('click')
+    const button = wrapper.find('button')
+    const status = wrapper.find('[role="status"]')
+    expect(button.text()).toBe('Download PPTX')
+    expect(button.classes()).toContain('mine')
+    expect(status.attributes('aria-live')).toBe('polite')
+    await button.trigger('click')
     await nextTick()
-    expect(wrapper.attributes('aria-busy')).toBe('true')
+    expect(button.attributes('aria-busy')).toBe('true')
+    expect(status.text()).toBe('Preparing presentation…')
     await until(() => wrapper.emitted('done') !== undefined)
     expect((wrapper.emitted('done')![0]![0] as Blob).size).toBeGreaterThan(1000)
     expect(click).toHaveBeenCalledOnce()
+    await until(() => status.text() === 'Presentation downloaded')
     click.mockRestore()
   })
 
-  it('emits errors and passes state to the slot', async () => {
+  it('takes its announcements from props', async () => {
+    const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {})
+    const wrapper = mount(PptxDownloadButton, {
+      props: { document: Deck, preparingText: 'Moment…', doneText: 'Hotovo' },
+    })
+    wrappers.push(wrapper)
+    await wrapper.find('button').trigger('click')
+    await nextTick()
+    expect(wrapper.find('[role="status"]').text()).toBe('Moment…')
+    await until(() => wrapper.find('[role="status"]').text() === 'Hotovo')
+    click.mockRestore()
+  })
+
+  it('emits errors, shows them as an alert and passes state to the slot', async () => {
     const wrapper = mount(PptxDownloadButton, {
       props: { document: defineComponent(() => () => h(Slide)) },
       slots: { default: ({ error }: { error: unknown }) => (error ? 'Failed' : 'Get it') },
     })
     wrappers.push(wrapper)
-    expect(wrapper.text()).toBe('Get it')
-    await wrapper.trigger('click')
+    const button = wrapper.find('button')
+    expect(button.text()).toBe('Get it')
+    expect(wrapper.find('[role="alert"]').exists()).toBe(false)
+    await button.trigger('click')
     await until(() => wrapper.emitted('error') !== undefined)
-    expect(wrapper.text()).toBe('Failed')
+    await until(() => button.text() === 'Failed')
+    expect(wrapper.find('[role="alert"]').text()).toContain('<Presentation>')
+    expect(button.attributes('aria-busy')).toBeUndefined()
+    expect(wrapper.find('[role="status"]').text()).toBe('')
   })
 })

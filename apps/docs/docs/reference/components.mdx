@@ -21,6 +21,7 @@ The root of every deck.
 | `title`, `author`, `company`, `subject` | File metadata.                                                                                     |
 | `revision`                              | A string or number.                                                                                |
 | `rtl`                                   | Right-to-left presentation.                                                                        |
+| `lang`                                  | Default language of every run without its own `lang`, such as `en-US`.                             |
 | `head-font-face`, `body-font-face`      | Theme fonts.                                                                                       |
 | `theme`                                 | PptxGenJS `ThemeProps` (`{ headFontFace, bodyFontFace }`); the two props above win.                |
 | `on-render`                             | `({ blob }) => void`, called after each `toBlob()` render.                                         |
@@ -34,6 +35,7 @@ Children: `Slide` and `Master`.
 | `background`   | A color, an image URL or data URI, or `{ color, transparency, src }`.          |
 | `color`        | Default text color.                                                            |
 | `hidden`       | Skip the slide in the slide show.                                              |
+| `title`        | Names the slide for screen readers in the preview ("Slide 4: Revenue").        |
 | `master`       | The `name` of a `Master`.                                                      |
 | `section`      | Start or continue a section with this title.                                   |
 | `notes`        | Speaker notes. `Notes` children work too.                                      |
@@ -124,22 +126,24 @@ A `Shape` with text content is written as a text box drawn as that shape, and ta
 | --------------------------------------------------------- | ----------------------------------------------------------- |
 | `src`                                                     | Required. A URL, a data URI or, in Node, a file path.       |
 | `x`, `y`, `w`, `h`, `style`                               | Position.                                                   |
-| `alt-text`                                                | Alternative text.                                           |
+| `alt-text`                                                | What the image shows. Without it the image is decorative.   |
+| `decorative`                                              | Empty description, even when `alt-text` is set.             |
 | `sizing`                                                  | `{ type, w, h }`, with `type` `contain`, `cover` or `crop`. |
 | `rounding`                                                | Crop to an ellipse.                                         |
 | `rotate`, `flip-h`, `flip-v`, `transparency`, `hyperlink` | As in PptxGenJS.                                            |
 
 ## Table
 
-| prop                                                            |                                                                  |
-| --------------------------------------------------------------- | ---------------------------------------------------------------- |
-| `rows`                                                          | `TableCellValue[][]`. When set, `TableRow` children are ignored. |
-| `col-w`, `row-h`                                                | One length, or one per column / row.                             |
-| `font-size`, `font-face`, `color`, `fill`, `align`, `valign`    | Defaults for every cell.                                         |
-| `border`                                                        | `BorderProps`, or four of them (top, right, bottom, left).       |
-| `margin`                                                        | Cell margin in inches.                                           |
-| `auto-page`, `auto-page-repeat-header`, `auto-page-header-rows` | PptxGenJS paging.                                                |
-| run styles                                                      | `bold`, `italic`, ... for every cell.                            |
+| prop                                                            |                                                                                                         |
+| --------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| `rows`                                                          | `TableCellValue[][]`. When set, `TableRow` children are ignored.                                        |
+| `col-w`, `row-h`                                                | One length, or one per column / row.                                                                    |
+| `font-size`, `font-face`, `color`, `fill`, `align`, `valign`    | Defaults for every cell.                                                                                |
+| `border`                                                        | `BorderProps`, or four of them (top, right, bottom, left).                                              |
+| `margin`                                                        | Cell margin in inches.                                                                                  |
+| `header-rows`                                                   | Rows from the top that are headers. The file flags the header row; the preview uses `<th scope="col">`. |
+| `auto-page`, `auto-page-repeat-header`, `auto-page-header-rows` | PptxGenJS paging.                                                                                       |
+| run styles                                                      | `bold`, `italic`, ... for every cell.                                                                   |
 
 Children: `TableRow`. See [Tables](/guides/tables).
 
@@ -167,6 +171,7 @@ Content: strings, `Run`, `Paragraph` and `Br`.
 | `title`, `show-title`        | Chart title.                                                                                                                         |
 | `show-legend`, `legend-pos`  | `legend-pos`: `b`, `l`, `r`, `t` or `tr`.                                                                                            |
 | `show-value`, `show-percent` | Data labels.                                                                                                                         |
+| `alt-text`                   | Description for screen readers. Without it, the preview labels the chart with its title and type.                                    |
 | `chart-colors`               | Series colors.                                                                                                                       |
 | `bar-dir`, `bar-grouping`    | `bar` or `col`; `clustered`, `stacked`, `percentStacked` or `standard`.                                                              |
 
@@ -229,15 +234,17 @@ Renders `div[data-pptx-slide]` with `role="group"` and `aria-roledescription="sl
 
 A button that renders the deck on click and saves it.
 
-| prop             | default               |                             |
-| ---------------- | --------------------- | --------------------------- |
-| `document`       | required              | The presentation component. |
-| `document-props` | `undefined`           | Its props.                  |
-| `file-name`      | `'presentation.pptx'` | The saved file's name.      |
+| prop             | default                     |                                    |
+| ---------------- | --------------------------- | ---------------------------------- |
+| `document`       | required                    | The presentation component.        |
+| `document-props` | `undefined`                 | Its props.                         |
+| `file-name`      | `'presentation.pptx'`       | The saved file's name.             |
+| `preparing-text` | `'Preparing presentation…'` | Announced while the file is built. |
+| `done-text`      | `'Presentation downloaded'` | Announced when the file is saved.  |
 
 | event   | payload   |
 | ------- | --------- |
 | `done`  | `Blob`    |
 | `error` | `unknown` |
 
-The default slot receives `{ loading, error }`. Renders `button[data-pptx-download]`, with `data-loading` and `aria-busy="true"` while it works.
+The default slot receives `{ loading, error }`. Renders `button[data-pptx-download]`, with `data-loading` and `aria-busy="true"` while it works, followed by a visually hidden `[role="status"]` live region for the two texts above and, after a failure, a `[role="alert"]` with the error message. Attributes you pass land on the button.

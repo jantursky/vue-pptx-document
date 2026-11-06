@@ -49,7 +49,7 @@ const Content: FunctionalComponent = () =>
     :data-hidden="current.hidden ? '' : undefined"
     role="group"
     aria-roledescription="slide"
-    :aria-label="label ?? `Slide ${index + 1}`"
+    :aria-label="label ?? (current.title ? `Slide ${index + 1}: ${current.title}` : `Slide ${index + 1}`)"
     :style="{
       position: 'relative',
       width: '100%',

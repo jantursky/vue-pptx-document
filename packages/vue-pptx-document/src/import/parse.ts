@@ -547,6 +547,7 @@ const pictureObject = async (
   const options: Options = { ...geometryOptions(child(spPr, 'a:xfrm')) }
   const description = attr(path(pic, 'p:nvPicPr', 'p:cNvPr'), 'descr')
   if (description) options.altText = description
+  else if (description === '') options.decorative = true
   if (attr(child(spPr, 'a:prstGeom'), 'prst') === 'ellipse') options.rounding = true
   if (
     descendants(path(pic, 'p:nvPicPr'), 'a:videoFile').length > 0 ||
@@ -602,7 +603,8 @@ const tableObject = async (importer: Importer, frame: Frame, tbl: XmlNode, part:
     }
     rows.push(cells)
   }
-  return { kind: 'table', frame, rows, options: { colW, rowH } }
+  const headerRows = attr(child(tbl, 'a:tblPr'), 'firstRow') === '1' ? { headerRows: 1 } : {}
+  return { kind: 'table', frame, rows, options: { colW, rowH, ...headerRows } }
 }
 
 const CHART_TYPES: Record<string, ChartName> = {

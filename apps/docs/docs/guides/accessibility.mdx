@@ -1,0 +1,65 @@
+---
+title: Accessible presentations
+description: Alt text, decorative images, table headers, language and slide titles, so the file passes PowerPoint's accessibility checker and the preview reads well with a screen reader.
+---
+
+PowerPoint's accessibility checker flags missing alt text, tables without a header row and a missing language. The library writes what it can from props you already know, and the preview uses the same information for screen readers.
+
+## Alt text
+
+Describe what an image shows with `alt-text`:
+
+```vue
+<Image src="/logo.png" alt-text="Acme logo" :x="0.5" :y="0.4" :w="1.2" :h="0.6" />
+```
+
+An image without `alt-text` is decorative: the file gets an empty description and the preview hides it from assistive technology. The path or data of the image is never used as the description. Set `decorative` to be explicit, or to ignore an `alt-text` you pass along from elsewhere:
+
+```vue
+<Image src="/divider.png" decorative :x="0" :y="5" :w="10" :h="0.1" />
+```
+
+Charts take `alt-text` too. Write the takeaway, not the type: "Revenue grew every quarter, from 4 to 9 million."
+
+```vue
+<Chart type="bar" :data="series" alt-text="Revenue grew every quarter, from 4 to 9 million" />
+```
+
+## Table headers
+
+`header-rows` marks the top rows as headers. The file flags the header row for PowerPoint's checker and screen readers, and the preview renders those rows as `<th scope="col">` inside `<thead>`:
+
+```vue
+<Table :rows="rows" :header-rows="1" />
+```
+
+## Language
+
+`lang` on `<Presentation>` is the default language of every run that has none, so spell check and screen readers pick the right voice. A run's own `lang` wins:
+
+```vue
+<Presentation lang="sk-SK">
+  <Slide>
+    <Text :x="0.5" :y="0.5" :w="9" :h="1">Dobrý deň</Text>
+    <Text :x="0.5" :y="1.5" :w="9" :h="1" lang="en-US">Hello</Text>
+  </Slide>
+</Presentation>
+```
+
+## Slide titles
+
+PowerPoint's outline view and screen readers announce a slide by its title placeholder. PptxGenJS can only fill a title placeholder through a master, so for decks that matter put a title placeholder on a `<Master>` and use it on each slide (see [Masters](/guides/masters)). The `title` prop of `<Slide>` doesn't change the file; it names the slide in the preview, where each slide reads "Slide 4: Revenue" and its caption "Slide 4 of 12".
+
+## Contrast
+
+Text on a colored fill needs a contrast ratio of 4.5:1 (3:1 for text of 18 pt or bold 14 pt and larger). The library doesn't check colors in your deck. Check them in PowerPoint's accessibility checker or with a contrast tool.
+
+## In the preview
+
+Besides the labels above, charts in the preview have `role="img"` and a label with their title and type, plus a visually hidden table of their series and values (`table[data-pptx-chart-data]`) for screen readers.
+
+[`<PptxDownloadButton>`](/guides/download) announces "Preparing presentation…" and "Presentation downloaded" through a polite live region, and shows a failure as a `role="alert"`. Change the texts with `preparing-text` and `done-text`.
+
+## Check the file
+
+Open a downloaded file in PowerPoint and run Review → Check Accessibility. The `toPptxGenJS()` escape hatch writes through PptxGenJS directly, so the empty image descriptions and the header row flag aren't applied there; use `renderToBlob()` or `usePptx()` for the final file.

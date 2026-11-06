@@ -4,7 +4,7 @@ import { cssColor, opacity } from '../core/colors'
 import { BULLET_INDENT, DEFAULT_FONT_SIZE, paragraphs, textInsets } from '../core/measure'
 import type { DeckModel, Frame, MasterModel, SlideModel, SlideObject, TableCellModel, TextRun } from '../core/model'
 import { PT_PER_IN } from '../core/units'
-import { renderChart } from './chart'
+import { renderChart, renderChartTable } from './chart'
 import { OPEN_SHAPES, shapePath } from './shapes'
 
 type Options = Record<string, unknown>
@@ -419,7 +419,9 @@ const renderImage = (object: Extract<SlideObject, { kind: 'image' }>, scale: Sca
     sizing?.type === 'contain' ? 'contain' : sizing?.type === 'cover' || sizing?.type === 'crop' ? 'cover' : 'fill'
   const image = h('img', {
     src: object.src,
-    alt: (options.altText as string | undefined) ?? '',
+    alt: options.decorative === true ? '' : ((options.altText as string | undefined) ?? ''),
+    // A linked image stays exposed, as the link's only content.
+    'aria-hidden': (options.decorative === true || !options.altText) && !options.hyperlink ? 'true' : undefined,
     draggable: false,
     style: {
       width: '100%',
@@ -466,7 +468,8 @@ const renderTable = (object: Extract<SlideObject, { kind: 'table' }>, context: T
   const heightOf = (index: number): number | undefined =>
     Array.isArray(rowH) ? (rowH as number[])[index] : typeof rowH === 'number' ? rowH : undefined
   const tableBorder = options.border as Border | Border[] | undefined
-  const cell = (model: TableCellModel, key: number): VNode => {
+  const headerRows = typeof options.headerRows === 'number' ? options.headerRows : 0
+  const cell = (model: TableCellModel, key: number, header: boolean): VNode => {
     const cellOptions = { ...options, ...(model.options as Options | undefined) }
     delete cellOptions.colW
     delete cellOptions.rowH
@@ -482,9 +485,10 @@ const renderTable = (object: Extract<SlideObject, { kind: 'table' }>, context: T
       typeof model.text === 'string' || model.text === undefined ? [{ text: model.text ?? '' }] : model.text
     const fill = fillOf(cellOptions.fill)
     return h(
-      'td',
+      header ? 'th' : 'td',
       {
         key,
+        scope: header ? 'col' : undefined,
         colspan: model.options?.colspan,
         rowspan: model.options?.rowspan,
         style: {
@@ -497,11 +501,20 @@ const renderTable = (object: Extract<SlideObject, { kind: 'table' }>, context: T
           borderBottom: cssBorder(bb, scale),
           borderLeft: cssBorder(bl, scale),
           whiteSpace: 'pre-wrap',
+          // Header cells look like any other until the author styles them.
+          ...(header ? { fontWeight: 'inherit', textAlign: 'inherit' } : {}),
         },
       },
       renderParagraphs(runs, { fontSize: 12, ...cellOptions }, context),
     )
   }
+  const rowNodes = object.rows.map((row, index) =>
+    h(
+      'tr',
+      { key: index, style: { height: heightOf(index) ? scale.in(heightOf(index) ?? 0) : undefined } },
+      row.map((model, key) => cell(model, key, index < headerRows)),
+    ),
+  )
   return h(
     'div',
     { 'data-pptx-object': 'table', style: { ...position(object.frame, scale), height: 'auto' } },
@@ -510,16 +523,8 @@ const renderTable = (object: Extract<SlideObject, { kind: 'table' }>, context: T
         'colgroup',
         widths.map((width, index) => h('col', { key: index, style: { width: scale.in(width) } })),
       ),
-      h(
-        'tbody',
-        object.rows.map((row, index) =>
-          h(
-            'tr',
-            { key: index, style: { height: heightOf(index) ? scale.in(heightOf(index) ?? 0) : undefined } },
-            row.map(cell),
-          ),
-        ),
-      ),
+      ...(headerRows > 0 ? [h('thead', rowNodes.slice(0, headerRows))] : []),
+      h('tbody', rowNodes.slice(headerRows)),
     ]),
   )
 }
@@ -596,6 +601,7 @@ const renderObject = (object: SlideObject, context: TextContext, key: number): V
     case 'chart':
       return h('div', { key, 'data-pptx-object': 'chart', style: position(object.frame, scale) }, [
         renderChart(object, context.fontFace),
+        renderChartTable(object),
       ])
     case 'media':
       return h(renderMedia(object, scale), { key })

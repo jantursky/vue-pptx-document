@@ -67,6 +67,7 @@ export interface SlideModel {
   /** Default text color. */
   color?: string
   hidden?: boolean
+  title?: string
   master?: string
   section?: string
   notes?: string
@@ -101,6 +102,8 @@ export interface DeckModel {
   layout: DeckLayout
   meta: DeckMeta
   rtl?: boolean
+  /** The default language of text runs. */
+  lang?: string
   theme?: PptxGenJS.ThemeProps
   masters: MasterModel[]
   slides: SlideModel[]
