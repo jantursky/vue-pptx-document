@@ -4,6 +4,25 @@ All notable changes to `vue-pptx-document` are listed here. The format follows [
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-11-06
+
+### Added
+
+- `lang` on `<Presentation>` sets the default language of every text run without its own.
+- `headerRows` on `<Table>` flags the header row in the file (`firstRow`) and renders `<th scope="col">` in the preview. The importer reads the flag back.
+- `decorative` on `<Image>`, and `altText` on `<Chart>` in the component types. The importer reads an empty image description back as `decorative`.
+- `title` on `<Slide>` names the slide for screen readers in the preview: "Slide 4: Revenue".
+- Charts in the preview have a label with their title and type and a visually hidden data table.
+- `<PptxDownloadButton>` announces "Preparing presentation…" and "Presentation downloaded" through a polite live region (`preparingText`, `doneText`), and shows a failure as a `role="alert"`.
+- A guide, "Accessible presentations".
+
+### Changed
+
+- Images without `altText` get an empty description in the file instead of their path or data, and the preview hides them from assistive technology.
+- `<Preview>` captions read "Slide 4 of 12" instead of "4 / 12".
+- `<PptxDownloadButton>` renders its button followed by two hidden status elements; attributes still land on the button.
+- The library's own size is 27.3 kB gzipped (budget 28 kB).
+
 ## [1.2.0] - 2026-11-06
 
 ### Added
@@ -73,7 +92,8 @@ All notable changes to `vue-pptx-document` are listed here. The format follows [
 - `vue-pptx-document/import`: `pptxToVue()`, `parsePptx()` and `modelToVue()` read a .pptx (runs, bullets, shapes, groups, pictures, tables, charts, theme colors, backgrounds, layouts and masters, sections, notes, slide numbers) and write a Vue component that renders it.
 - A `vue-pptx-document import deck.pptx -o Deck.vue` command line.
 
-[Unreleased]: https://github.com/jantursky/vue-pptx-document/compare/1.2.0...HEAD
+[Unreleased]: https://github.com/jantursky/vue-pptx-document/compare/1.3.0...HEAD
+[1.3.0]: https://github.com/jantursky/vue-pptx-document/compare/1.2.0...1.3.0
 [1.2.0]: https://github.com/jantursky/vue-pptx-document/compare/1.1.3...1.2.0
 [1.1.3]: https://github.com/jantursky/vue-pptx-document/compare/1.1.2...1.1.3
 [1.1.2]: https://github.com/jantursky/vue-pptx-document/compare/1.1.1...1.1.2
