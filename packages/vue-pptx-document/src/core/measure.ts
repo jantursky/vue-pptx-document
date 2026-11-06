@@ -54,8 +54,14 @@ const fromCanvas = (): Measurer | null => {
           : document.createElement('canvas')
     const context = canvas?.getContext('2d') as CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D | null
     if (context && typeof context.measureText === 'function') {
+      let current = ''
       canvasMeasurer = (text, font) => {
-        context.font = `${font.italic ? 'italic ' : ''}${font.bold ? 'bold ' : ''}${font.size}pt ${JSON.stringify(font.face)}, sans-serif`
+        // Setting the font re-parses it, so only do it when it changes.
+        const next = `${font.italic ? 'italic ' : ''}${font.bold ? 'bold ' : ''}${font.size}pt ${JSON.stringify(font.face)}, sans-serif`
+        if (next !== current) {
+          context.font = next
+          current = next
+        }
         return context.measureText(text).width / 96
       }
     }
@@ -65,21 +71,51 @@ const fromCanvas = (): Measurer | null => {
   return canvasMeasurer
 }
 
+/** Average glyph widths in em for ASCII, by character code. Anything else counts as a lowercase letter. */
+const GLYPH_EM = (() => {
+  const table = new Float32Array(128).fill(0.52)
+  const set = (chars: string, em: number): void => {
+    for (const char of chars) table[char.charCodeAt(0)] = em
+  }
+  set('ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789', 0.65)
+  set(" il.,;:'!|", 0.28)
+  set('mwMW@', 0.85)
+  return table
+})()
+const FALLBACK_EM = 0.52
+
 /** Average glyph widths in em, for Node and anywhere without a canvas. */
 const estimate: Measurer = (text, font) => {
   let em = 0
   for (const char of text) {
-    if (char === ' ') em += 0.28
-    else if (/[il.,;:'!|]/.test(char)) em += 0.28
-    else if (/[mwMW@]/.test(char)) em += 0.85
-    else if (/[A-Z0-9]/.test(char)) em += 0.65
-    else em += 0.52
+    em += GLYPH_EM[char.charCodeAt(0)] ?? FALLBACK_EM
   }
   if (font.bold) em *= 1.06
   return (em * font.size) / PT_PER_IN
 }
 
-const width: Measurer = (text, font) => (fromCanvas() ?? estimate)(text, font)
+/** How many measured words the cache keeps before it starts over. */
+export const MEASURE_CACHE_LIMIT = 5000
+const widths = new Map<string, number>()
+
+/** Forgets every measured width, for when the fonts change (web fonts finishing to load). */
+export const clearMeasureCache = (): void => {
+  widths.clear()
+}
+
+/** The number of widths the cache holds right now. */
+export const measureCacheSize = (): number => widths.size
+
+const width: Measurer = (text, font) => {
+  const key = `${font.italic ? 'i' : ''}${font.bold ? 'b' : ''}${font.size}|${font.face}\u0000${text}`
+  const known = widths.get(key)
+  if (known !== undefined) return known
+  const measured = (fromCanvas() ?? estimate)(text, font)
+  // Clear when full: simpler than LRU, and decks reuse a small vocabulary.
+  if (widths.size >= MEASURE_CACHE_LIMIT) widths.clear()
+  widths.set(key, measured)
+  return measured
+}
 
 export interface TextBoxOptions {
   fontSize?: number

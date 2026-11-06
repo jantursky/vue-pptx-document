@@ -75,7 +75,7 @@ describe('Preview', () => {
       setup: (props) => () => h(singleSlide(() => h(Text, { w: 5, h: 1 }, () => props.title))),
     })
     const wrapper = mount(Preview, {
-      props: { document: Titled, documentProps: { title: 'First' }, debounce: 0 },
+      props: { document: Titled, documentProps: { title: 'First' }, debounce: 0, lazy: false },
       slots: { caption: ({ index, total }: { index: number; total: number }) => `Slide ${index + 1} of ${total}` },
     })
     wrappers.push(wrapper)

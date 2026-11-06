@@ -1,8 +1,8 @@
 import { mount } from '@vue/test-utils'
-import { describe, expect, it } from 'vitest'
-import { h } from 'vue'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { defineComponent, h } from 'vue'
 
-import { Chart, Paragraph, Shape, SlidePreview, Text, renderToModel } from '../../src'
+import { Chart, Paragraph, Preview, Presentation, Shape, Slide, SlidePreview, Text, renderToModel } from '../../src'
 import type { ChartName } from '../../src'
 import { formatNumber, niceScale } from '../../src/preview/chart'
 import { isKnownShape, shapePath } from '../../src/preview/shapes'
@@ -146,5 +146,81 @@ describe('links', () => {
     const wrapper = await draw(() => h(Text, { x: 0, y: 0, w: 5, h: 1, href: 'javascript:alert(1)' }, () => 'Click'))
     expect(wrapper.find('a').exists()).toBe(false)
     expect(wrapper.text()).toContain('Click')
+  })
+})
+
+describe('large decks', () => {
+  afterEach(() => vi.unstubAllGlobals())
+
+  const Many = defineComponent({
+    props: { second: { type: String, required: true } },
+    setup: (props) => () =>
+      h(Presentation, null, () =>
+        ['One', props.second, 'Three'].map((text, index) =>
+          h(Slide, { key: index }, () => h(Text, { x: 0, y: 0, w: 3, h: 1 }, () => text)),
+        ),
+      ),
+  })
+
+  const until = (condition: () => boolean) =>
+    vi.waitFor(() => {
+      if (!condition()) throw new Error('not yet')
+    })
+
+  it('keeps the DOM of slides that did not change', async () => {
+    const wrapper = mount(Preview, {
+      props: { document: Many, documentProps: { second: 'Two' }, debounce: 0, lazy: false },
+    })
+    await until(() => wrapper.findAll('[data-pptx-slide]').length === 3)
+    const before = wrapper.findAll('[data-pptx-slide]').map((node) => node.element)
+    await wrapper.setProps({ documentProps: { second: 'Changed' } })
+    await until(() => wrapper.text().includes('Changed'))
+    const after = wrapper.findAll('[data-pptx-slide]').map((node) => node.element)
+    expect(after[0]).toBe(before[0])
+    expect(after[2]).toBe(before[2])
+    expect(wrapper.findAll('[data-pptx-slide]')[1]!.text()).toBe('Changed')
+    wrapper.unmount()
+  })
+
+  it('draws only slides near the viewport until others scroll in', async () => {
+    const watched: { callback: IntersectionObserverCallback; elements: Element[] }[] = []
+    vi.stubGlobal(
+      'IntersectionObserver',
+      class {
+        elements: Element[] = []
+        constructor(callback: IntersectionObserverCallback) {
+          watched.push({ callback, elements: this.elements })
+        }
+        observe(element: Element) {
+          this.elements.push(element)
+        }
+        unobserve() {}
+        disconnect() {}
+      },
+    )
+    const wrapper = mount(Preview, { props: { document: Many, documentProps: { second: 'Two' }, debounce: 0 } })
+    await until(() => wrapper.findAll('figure').length === 3)
+    // Every figure already has its slide's shape, with nothing drawn in it.
+    expect(wrapper.findAll('[data-pptx-slide]')).toHaveLength(0)
+    expect(wrapper.findAll('[data-pptx-slide-placeholder]')).toHaveLength(3)
+    expect(wrapper.find('figure > div').attributes('style')).toContain('aspect-ratio: 10 / 5.625')
+    const [observer] = watched
+    const [first] = observer!.elements
+    observer!.callback([{ target: first!, isIntersecting: true } as IntersectionObserverEntry], {} as never)
+    await until(() => wrapper.findAll('[data-pptx-slide]').length === 1)
+    expect(wrapper.find('[data-pptx-slide]').text()).toBe('One')
+    expect(wrapper.findAll('[data-pptx-slide-placeholder]')).toHaveLength(2)
+    window.dispatchEvent(new Event('beforeprint'))
+    await until(() => wrapper.findAll('[data-pptx-slide]').length === 3)
+    wrapper.unmount()
+  })
+
+  it('draws every slide at once with lazy off', async () => {
+    const wrapper = mount(Preview, {
+      props: { document: Many, documentProps: { second: 'Two' }, debounce: 0, lazy: false },
+    })
+    await until(() => wrapper.findAll('[data-pptx-slide]').length === 3)
+    expect(wrapper.findAll('[data-pptx-slide-placeholder]')).toHaveLength(0)
+    wrapper.unmount()
   })
 })

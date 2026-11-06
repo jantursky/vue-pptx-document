@@ -11,9 +11,11 @@ import {
 } from 'vue'
 
 import type { DeckModel } from '../core/model'
+import { clearMeasureCache } from '../core/measure'
 import { collect, type DiagnosticOptions, type PptxWarning } from '../core/diagnostics'
 import { pptx, type PptxInstance } from '../core/pptx'
 import type { ReactivePropsArgs } from '../core/props'
+import { reuseModel } from '../core/reuse'
 
 type Props = Record<string, unknown>
 
@@ -63,7 +65,7 @@ export function useSlides<C extends Component>(
     try {
       const result = await instance.toModel(collected.options)
       if (current !== run) return
-      model.value = result
+      model.value = reuseModel(model.value, result)
       error.value = null
     } catch (caught) {
       if (current === run) error.value = caught
@@ -75,8 +77,16 @@ export function useSlides<C extends Component>(
     }
   }
 
+  // Web fonts change text widths, so measure again once they have loaded.
+  const fonts = typeof document === 'undefined' ? undefined : (document.fonts as Partial<FontFaceSet> | undefined)
+  const onFontsLoaded = (): void => {
+    clearMeasureCache()
+    if (instance) void update()
+  }
+
   const start = (): void => {
     if (disposed) return
+    fonts?.addEventListener?.('loadingdone', onFontsLoaded)
     instance = pptx<Component>(presentation, props)
     stop = instance.onChange(() => {
       clearTimeout(timer)
@@ -92,6 +102,7 @@ export function useSlides<C extends Component>(
     disposed = true
     run++
     clearTimeout(timer)
+    fonts?.removeEventListener?.('loadingdone', onFontsLoaded)
     stop?.()
     instance?.unmount()
     instance = undefined

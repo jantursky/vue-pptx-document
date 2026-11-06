@@ -38,9 +38,24 @@ bun run test:browser   # writing and measuring in Chromium, Firefox and WebKit
 bun run test:e2e       # builds the demo and drives it with Playwright
 bun run build          # fails over the size budgets in .size-limit.json
 bun run lint:package && bun run test:pack   # after build: publint, types, install the tarball, run the CLI
+bun run bench          # after build: times resolve, layout and preview of a 100-slide deck
 ```
 
 CI runs all of them on every pull request.
+
+## Performance
+
+`bun run bench` prints timings for a 100-slide report deck (a title, a paragraph, a table and a chart on each slide). It never fails, because timings on shared runners vary too much to gate on. On an Apple-silicon laptop with Node 24, after this change:
+
+| step                                          | time (ms) |
+| --------------------------------------------- | --------- |
+| resolve, absolute layout, cold cache          | 23        |
+| resolve, absolute layout, warm cache          | 14        |
+| layout, flex with Yoga, cold cache            | 43        |
+| layout, flex with Yoga, warm cache            | 17        |
+| preview, 100 slides as HTML (server-rendered) | 25        |
+
+Run it before and after a change to `src/core/measure.ts`, `resolve.ts` or the preview components.
 
 ## Conventions
 

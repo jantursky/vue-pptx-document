@@ -190,15 +190,16 @@ Speaker notes for the slide it's on, directly or inside a `<View>`. Content: str
 
 Draws every slide as HTML and SVG and redraws after changes. See [Preview](/guides/preview).
 
-| prop             | default                  |                                                    |
-| ---------------- | ------------------------ | -------------------------------------------------- |
-| `document`       | required                 | The presentation component. Read once, on mount.   |
-| `document-props` | `undefined`              | Its props. A change redraws.                       |
-| `slide`          | `undefined`              | Show only this slide, zero-based.                  |
-| `notes`          | `false`                  | Show speaker notes under each slide.               |
-| `debounce`       | `50`                     | Milliseconds between the last change and a redraw. |
-| `label`          | `'Presentation preview'` | Accessible name.                                   |
-| `@warn`          |                          | Receives each warning instead of the console.      |
+| prop             | default                  |                                                        |
+| ---------------- | ------------------------ | ------------------------------------------------------ |
+| `document`       | required                 | The presentation component. Read once, on mount.       |
+| `document-props` | `undefined`              | Its props. A change redraws.                           |
+| `slide`          | `undefined`              | Show only this slide, zero-based.                      |
+| `notes`          | `false`                  | Show speaker notes under each slide.                   |
+| `debounce`       | `50`                     | Milliseconds between the last change and a redraw.     |
+| `lazy`           | `true`                   | Draw only slides near the viewport. `false` draws all. |
+| `label`          | `'Presentation preview'` | Accessible name.                                       |
+| `@warn`          |                          | Receives each warning instead of the console.          |
 
 | slot      | props                     |                                        |
 | --------- | ------------------------- | -------------------------------------- |
@@ -212,11 +213,15 @@ Renders `section[data-pptx-preview]` with one `figure[data-pptx-preview-slide]` 
 
 Draws one slide of a resolved model.
 
-| prop    |                                         |
-| ------- | --------------------------------------- |
-| `model` | Required. A `DeckModel`.                |
-| `index` | Required. Zero-based slide index.       |
-| `label` | Accessible name. Defaults to `Slide N`. |
+| prop      |                                                                          |
+| --------- | ------------------------------------------------------------------------ |
+| `model`   | A `DeckModel`. Required unless `slide` and `layout` are given.           |
+| `index`   | Required. Zero-based slide index.                                        |
+| `slide`   | One `SlideModel`, instead of `model`. Unchanged objects are not redrawn. |
+| `masters` | The model's `masters`, with `slide`.                                     |
+| `layout`  | The model's `layout`, with `slide`.                                      |
+| `theme`   | The model's `theme`, with `slide`.                                       |
+| `label`   | Accessible name. Defaults to `Slide N`.                                  |
 
 Renders `div[data-pptx-slide]` with `role="group"` and `aria-roledescription="slide"`, so its text stays readable to screen readers, full width and the slide's aspect ratio.
 

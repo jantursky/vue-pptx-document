@@ -23,6 +23,7 @@
     "test:browser": "bun run --filter vue-pptx-document test:browser",
     "test:e2e": "bun run build && bun run --filter example test:e2e",
     "test:pack": "bun run --filter vue-pptx-document test:pack",
+    "bench": "bun run --filter vue-pptx-document bench",
     "typecheck": "bun run --filter '*' typecheck",
     "lint": "eslint . --max-warnings 0",
     "lint:fix": "eslint . --fix",

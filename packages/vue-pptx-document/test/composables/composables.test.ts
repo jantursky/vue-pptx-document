@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { defineComponent, effectScope, h, nextTick, ref } from 'vue'
 
 import { Presentation, Slide, Text, usePptx, useSlides, type PptxWarning } from '../../src'
@@ -50,6 +50,39 @@ describe('useSlides', () => {
     await nextTick()
     await until(() => result.model.value!.slides.length === 3)
     expect(result.loading.value).toBe(false)
+    scope.stop()
+  })
+})
+
+describe('useSlides incremental updates', () => {
+  afterEach(() => vi.useRealTimers())
+
+  const Many = defineComponent({
+    props: { second: { type: String, required: true } },
+    setup: (props) => () =>
+      h(Presentation, null, () =>
+        ['One', props.second, 'Three', 'Four', 'Five'].map((text, index) =>
+          h(Slide, { key: index }, () => h(Text, { x: 0, y: 0, w: 3, h: 1 }, () => text)),
+        ),
+      ),
+  })
+
+  it('keeps the objects of unchanged slides', async () => {
+    vi.useFakeTimers()
+    const second = ref('Two')
+    const scope = effectScope()
+    const result = scope.run(() => useSlides(Many, () => ({ second: second.value }), { debounce: 10 }))!
+    await vi.waitFor(() => expect(result.model.value).not.toBeNull(), { interval: 5 })
+    const before = result.model.value!
+    second.value = 'Changed'
+    await nextTick()
+    await vi.advanceTimersByTimeAsync(20)
+    await vi.waitFor(() => expect(result.model.value).not.toBe(before), { interval: 5 })
+    const after = result.model.value!
+    for (const index of [0, 2, 3, 4]) expect(after.slides[index]).toBe(before.slides[index])
+    expect(after.slides[1]).not.toBe(before.slides[1])
+    expect(after.masters).toBe(before.masters)
+    expect(after.layout).toBe(before.layout)
     scope.stop()
   })
 })

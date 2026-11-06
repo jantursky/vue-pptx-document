@@ -72,6 +72,7 @@ test('exports and imports JSON', async ({ page }) => {
 
 test('takes a logo and exports Vue code', async ({ page }) => {
   await page.locator('[data-field="logo"]').setInputFiles({ name: 'logo.png', mimeType: 'image/png', buffer: PNG })
+  await slides(page).first().scrollIntoViewIfNeeded()
   await expect(slides(page).first().locator('img')).toBeVisible()
   await page.locator('[data-export-vue]').click()
   const code = page.locator('.generator-preview .generated')

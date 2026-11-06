@@ -20,6 +20,7 @@ Browsers can't display `.pptx` files, so the library draws the slides itself. Th
 | `slide`          | `undefined`              | Show only this slide, zero-based.                  |
 | `notes`          | `false`                  | Show each slide's speaker notes under it.          |
 | `debounce`       | `50`                     | Milliseconds between the last change and a redraw. |
+| `lazy`           | `true`                   | Draw only slides near the viewport, see below.     |
 | `label`          | `'Presentation preview'` | Accessible name of the wrapping `<section>`.       |
 
 | slot      | props                     |                                                                                |
@@ -50,9 +51,23 @@ The markup has no styles of its own beyond the slide boxes. Style it through its
 }
 ```
 
+### Large decks
+
+By default `<Preview>` draws a slide only once it is within one viewport height of the screen. Every other slide is an empty box with the slide's aspect ratio (`div[data-pptx-slide-placeholder]`), so the page keeps its height and scrolling doesn't jump. A slide that has been drawn stays drawn, so find-in-page and screen readers keep seeing it. The browser's `beforeprint` event draws the remaining slides first.
+
+Turn it off when you need every slide in the DOM at once, such as for screenshots or tests:
+
+```vue
+<Preview :document="ReportDeck" :lazy="false" />
+```
+
+Without `IntersectionObserver` (server rendering, old runtimes) every slide is drawn.
+
+Editing is incremental too. `useSlides()` hands back the previous slide, master and layout objects wherever their content is unchanged, and `<Preview>` skips the slides whose objects are the same, so a change on slide 40 redraws slide 40 only. Text widths are cached per font and word, and the cache is cleared when web fonts finish loading. Run `bun run bench` in the repository to time a 100-slide deck.
+
 ## SlidePreview
 
-`<SlidePreview>` draws one slide of a model you already have, from `useSlides()` or `renderToModel()`:
+`<SlidePreview>` draws one slide of a model you already have, from `useSlides()` or `renderToModel()`. Pass `model` and `index`, or `slide`, `masters` and `layout` (and `theme`) to draw one slide object. Vue then skips the redraw while those objects stay the same, which is how `<Preview>` leaves unchanged slides alone:
 
 ```vue
 <script setup lang="ts">

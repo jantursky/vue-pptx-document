@@ -23,6 +23,8 @@ for (const colorScheme of ['light', 'dark'] as const) {
 
     test('the overview has no accessibility violations', async ({ page }) => {
       await page.goto('/')
+      // The preview draws a slide once it is near the viewport.
+      await page.locator('#example-report').scrollIntoViewIfNeeded()
       await expect(page.locator('#example-report [data-pptx-slide]').first()).toBeVisible()
       await page.locator('#example-report').getByRole('button', { name: 'View source' }).click()
       expect(await audit(page)).toEqual([])

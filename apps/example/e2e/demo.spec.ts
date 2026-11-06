@@ -16,6 +16,8 @@ test.afterEach(() => {
 test('previews every example', async ({ page }) => {
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('PowerPoint files from Vue components')
   for (const id of ['#example-minimal', '#example-layout', '#example-charts', '#example-report']) {
+    // The preview draws a slide once it is near the viewport.
+    await page.locator(id).scrollIntoViewIfNeeded()
     await expect(page.locator(`${id} [data-pptx-slide]`).first()).toBeVisible()
   }
   await expect(page.locator('#example-layout [data-pptx-slide]')).toHaveCount(2)
