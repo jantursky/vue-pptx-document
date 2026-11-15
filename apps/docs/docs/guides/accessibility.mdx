@@ -58,7 +58,7 @@ Text on a colored fill needs a contrast ratio of 4.5:1 (3:1 for text of 18 pt or
 
 Besides the labels above, charts in the preview have `role="img"` and a label with their title and type, plus a visually hidden table of their series and values (`table[data-pptx-chart-data]`) for screen readers.
 
-[`<PptxDownloadButton>`](/guides/download) announces "Preparing presentation…" and "Presentation downloaded" through a polite live region, and shows a failure as a `role="alert"`. Change the texts with `preparing-text` and `done-text`.
+[`<PptxDownloadButton>`](/guides/download) announces "Preparing presentation…" and "Presentation downloaded" through a polite live region, and reports a failure in a `role="alert"` that is visually hidden, so screen readers hear it but sighted users see nothing. Listen to `@error` to show the failure yourself. Change the texts with `preparing-text` and `done-text`.
 
 ## Check the file
 

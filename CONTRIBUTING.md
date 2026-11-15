@@ -26,6 +26,7 @@ bun run dev                                       # demo app, reading the librar
 | `packages/vue-pptx-document/src/components`           | Primitives, `Preview`, `SlidePreview`, `PptxDownloadButton`.                                        |
 | `packages/vue-pptx-document/src/preview`              | The HTML and SVG renderer behind the preview: text, preset shapes, tables, charts.                  |
 | `packages/vue-pptx-document/src/import`, `src/cli.ts` | The .pptx reader, the Vue code writer and the command line.                                         |
+| `packages/vue-pptx-document/src/testing`              | `readPptx`, `findText` and `toOutline`, the `vue-pptx-document/testing` helpers.                    |
 | `packages/vue-pptx-document/test`                     | Unit tests (Node + happy-dom) and `test/browser` (real engines).                                    |
 | `apps/example`                                        | The demo, its Playwright e2e tests in `e2e/`, and `src/typecheck` with the README and docs samples. |
 | `apps/docs`                                           | The Blume docs site. Live examples come from `apps/example/src/examples/*Example.vue`.              |
@@ -41,7 +42,13 @@ bun run lint:package && bun run test:pack   # after build: publint, types, insta
 bun run bench          # after build: times resolve, layout and preview of a 100-slide deck
 ```
 
-CI runs all of them on every pull request.
+CI runs all of them on every pull request, and also:
+
+- the unit tests, the typecheck and the pack test on Node 20.19 (the oldest `engines.node`), 22 and 24, with Vue 3.5.0 and, on Node 22, the latest Vue,
+- the pack test, including the CLI, on Linux, Windows and macOS,
+- `dependency-review` on pull requests and CodeQL weekly, on pull requests and on `main`.
+
+The round-trip test (`packages/vue-pptx-document/test/roundtrip.test.ts`) renders each demo and docs example deck, reads it back with the importer and compares it to the model it came from. When you add an example deck, add it to the list there.
 
 ## Performance
 

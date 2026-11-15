@@ -5,7 +5,8 @@
     "noEmit": true,
     "paths": {
       "vue-pptx-document": ["../../packages/vue-pptx-document/src/index.ts"],
-      "vue-pptx-document/import": ["../../packages/vue-pptx-document/src/import/index.ts"]
+      "vue-pptx-document/import": ["../../packages/vue-pptx-document/src/import/index.ts"],
+      "vue-pptx-document/testing": ["../../packages/vue-pptx-document/src/testing/index.ts"]
     }
   },
   "include": ["src/**/*.ts", "src/**/*.vue", "vite.config.ts", "e2e/**/*.ts", "playwright.config.ts"]

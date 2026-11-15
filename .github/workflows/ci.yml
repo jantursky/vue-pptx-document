@@ -45,6 +45,13 @@ jobs:
         run: bun run build
       - name: Check the package (publint, type resolution)
         run: bun run lint:package
+      # The runtime and pack jobs test this build instead of building it again.
+      - name: Keep the built library for the runtime jobs
+        uses: actions/upload-artifact@v7
+        with:
+          name: dist
+          path: packages/vue-pptx-document/dist/
+          retention-days: 1
       - name: Install the packed tarball and render from it
         run: bun run test:pack
       - name: End-to-end tests of the demo app
@@ -61,15 +68,21 @@ jobs:
       - name: Build docs
         run: bun run build:docs
 
-  # The library declares vue ^3.5.0, so it's tested against the oldest version in that
-  # range and against the newest one on npm, not only the version in bun.lock.
-  vue-versions:
-    name: Vue ${{ matrix.vue }}
+  # The library declares vue ^3.5.0 and node >=20.19, so it's tested against the oldest Vue in
+  # that range and the newest one on npm, and on the oldest, the current and the newest Node.
+  # Vue latest runs on Node 22 only, to keep the number of jobs down.
+  runtime:
+    name: Node ${{ matrix.node }}, Vue ${{ matrix.vue }}
+    needs: check
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        vue: ['3.5.0', 'latest']
+        node: ['20.19', '22', '24']
+        vue: ['3.5.0']
+        include:
+          - node: '22'
+            vue: latest
     steps:
       - uses: actions/checkout@v7
       - uses: oven-sh/setup-bun@v2
@@ -77,7 +90,7 @@ jobs:
           bun-version-file: package.json
       - uses: actions/setup-node@v7
         with:
-          node-version: 22
+          node-version: ${{ matrix.node }}
       - name: Install with vue@${{ matrix.vue }}
         run: |
           npm pkg set overrides.vue=${{ matrix.vue }}
@@ -94,3 +107,46 @@ jobs:
         run: bun run --filter vue-pptx-document typecheck
       - name: Unit tests
         run: bun run test
+      - name: Download the built library
+        uses: actions/download-artifact@v8
+        with:
+          name: dist
+          path: packages/vue-pptx-document/dist/
+      - name: Install the packed tarball and render from it
+        run: bun run test:pack
+
+  # The tarball, its CLI and its subpaths on the three operating systems.
+  pack:
+    name: Pack test on ${{ matrix.os }}
+    needs: check
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - run: bun install --frozen-lockfile
+      - name: Download the built library
+        uses: actions/download-artifact@v8
+        with:
+          name: dist
+          path: packages/vue-pptx-document/dist/
+      - name: Install the packed tarball, render and run the CLI
+        run: bun run test:pack
+
+  # New dependencies are checked for known vulnerabilities and licenses before they merge.
+  dependency-review:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/dependency-review-action@v5

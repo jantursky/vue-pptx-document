@@ -72,18 +72,69 @@ describe('useSlides incremental updates', () => {
     const second = ref('Two')
     const scope = effectScope()
     const result = scope.run(() => useSlides(Many, () => ({ second: second.value }), { debounce: 10 }))!
-    await vi.waitFor(() => expect(result.model.value).not.toBeNull(), { interval: 5 })
+    await vi.advanceTimersByTimeAsync(0)
+    expect(result.model.value).not.toBeNull()
     const before = result.model.value!
     second.value = 'Changed'
     await nextTick()
-    await vi.advanceTimersByTimeAsync(20)
-    await vi.waitFor(() => expect(result.model.value).not.toBe(before), { interval: 5 })
+    await vi.advanceTimersByTimeAsync(10)
+    expect(result.model.value).not.toBe(before)
     const after = result.model.value!
     for (const index of [0, 2, 3, 4]) expect(after.slides[index]).toBe(before.slides[index])
     expect(after.slides[1]).not.toBe(before.slides[1])
     expect(after.masters).toBe(before.masters)
     expect(after.layout).toBe(before.layout)
     scope.stop()
+  })
+})
+
+describe('debounce', () => {
+  afterEach(() => vi.useRealTimers())
+
+  const Titled = defineComponent({
+    props: { text: { type: String, required: true } },
+    setup: (props) => () =>
+      h(Presentation, null, () => h(Slide, null, () => h(Text, { x: 0, y: 0, w: 3, h: 1 }, () => props.text))),
+  })
+
+  it('renders once for changes that come within the delay, and only after it', async () => {
+    vi.useFakeTimers()
+    const text = ref('First')
+    const scope = effectScope()
+    const result = scope.run(() => useSlides(Titled, () => ({ text: text.value }), { debounce: 100 }))!
+    await vi.advanceTimersByTimeAsync(0)
+    const first = result.model.value
+    expect(first).not.toBeNull()
+
+    text.value = 'Second'
+    await nextTick()
+    await vi.advanceTimersByTimeAsync(60)
+    text.value = 'Third'
+    await nextTick()
+    // 120 ms after the first change, but only 60 ms after the last one.
+    await vi.advanceTimersByTimeAsync(60)
+    expect(result.model.value).toBe(first)
+
+    await vi.advanceTimersByTimeAsync(40)
+    const last = result.model.value!
+    expect(last).not.toBe(first)
+    const object = last.slides[0]!.objects[0]
+    expect(object?.kind === 'text' && object.runs[0]?.text).toBe('Third')
+    scope.stop()
+  })
+
+  it('does not render again after the scope stops', async () => {
+    vi.useFakeTimers()
+    const text = ref('First')
+    const scope = effectScope()
+    const result = scope.run(() => useSlides(Titled, () => ({ text: text.value }), { debounce: 100 }))!
+    await vi.advanceTimersByTimeAsync(0)
+    const first = result.model.value
+    text.value = 'Second'
+    await nextTick()
+    scope.stop()
+    await vi.advanceTimersByTimeAsync(500)
+    expect(result.model.value).toBe(first)
   })
 })
 

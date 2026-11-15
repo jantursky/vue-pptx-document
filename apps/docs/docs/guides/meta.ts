@@ -14,6 +14,7 @@ export default defineMeta({
     'download',
     'accessibility',
     'import',
+    'testing',
     'server',
     'migrating-from-react-pptx',
     'troubleshooting',

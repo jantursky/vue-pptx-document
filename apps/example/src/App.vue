@@ -51,7 +51,9 @@ const onTabKey = (event: KeyboardEvent, index: number) => {
 
 const open = (next: Tab) => {
   select(next)
-  document.getElementById('tabs')?.scrollIntoView({ behavior: 'smooth' })
+  document.getElementById('tabs')?.scrollIntoView({
+    behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
+  })
 }
 
 // Light, dark, or the system's choice, kept on <html data-theme>.

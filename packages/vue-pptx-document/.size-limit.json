@@ -28,5 +28,12 @@
     "ignore": ["vue"],
     "gzip": true,
     "limit": "70 kB"
+  },
+  {
+    "name": "The testing helpers (with the importer chunk they share, engines excluded)",
+    "path": "dist/testing.js",
+    "ignore": ["vue", "jszip", "fast-xml-parser", "pptxgenjs", "yoga-layout"],
+    "gzip": true,
+    "limit": "10 kB"
   }
 ]

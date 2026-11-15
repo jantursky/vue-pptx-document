@@ -4,6 +4,20 @@ All notable changes to `vue-pptx-document` are listed here. The format follows [
 
 ## [Unreleased]
 
+## [1.4.0] - 2026-11-15
+
+### Added
+
+- `vue-pptx-document/testing`: `readPptx()` reads a generated .pptx back into the deck model plus each slide's XML, texts and notes, `findText()` finds the slides that hold a text, and `toOutline()` writes a stable outline for snapshot tests. It works in Node without a DOM.
+- A guide, "Testing your decks", and a reference page for the new entry.
+
+### Changed
+
+- CI runs the unit tests and the pack test on Node 20.19, 22 and 24, and the pack test on Windows and macOS as well as Linux. It adds a dependency review for pull requests and a CodeQL scan.
+- The branch-coverage gate rises from 78 to 80, and the debounce tests use fake timers.
+- The size of the testing entry is 9.6 kB gzipped with the importer chunk it shares (budget 10 kB). The size of the main entry is unchanged.
+- The demo's scroll to the tabs respects `prefers-reduced-motion`, and the accessibility guide says the download button's failure message is visually hidden.
+
 ## [1.3.0] - 2026-11-06
 
 ### Added
@@ -92,7 +106,8 @@ All notable changes to `vue-pptx-document` are listed here. The format follows [
 - `vue-pptx-document/import`: `pptxToVue()`, `parsePptx()` and `modelToVue()` read a .pptx (runs, bullets, shapes, groups, pictures, tables, charts, theme colors, backgrounds, layouts and masters, sections, notes, slide numbers) and write a Vue component that renders it.
 - A `vue-pptx-document import deck.pptx -o Deck.vue` command line.
 
-[Unreleased]: https://github.com/jantursky/vue-pptx-document/compare/1.3.0...HEAD
+[Unreleased]: https://github.com/jantursky/vue-pptx-document/compare/1.4.0...HEAD
+[1.4.0]: https://github.com/jantursky/vue-pptx-document/compare/1.3.0...1.4.0
 [1.3.0]: https://github.com/jantursky/vue-pptx-document/compare/1.2.0...1.3.0
 [1.2.0]: https://github.com/jantursky/vue-pptx-document/compare/1.1.3...1.2.0
 [1.1.3]: https://github.com/jantursky/vue-pptx-document/compare/1.1.2...1.1.3

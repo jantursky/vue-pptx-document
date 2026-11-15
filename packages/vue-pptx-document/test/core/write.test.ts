@@ -18,7 +18,8 @@ import {
   renderToBuffer,
 } from '../../src'
 import Deck from '../fixtures/Deck.vue'
-import { slideText, unzip } from '../fixtures'
+import { readPptx } from '../../src/testing'
+import { unzip } from '../fixtures'
 
 const isZip = (bytes: Uint8Array) => bytes[0] === 0x50 && bytes[1] === 0x4b
 
@@ -28,8 +29,9 @@ describe('writing', () => {
     expect(isZip(bytes)).toBe(true)
     const parts = await unzip(bytes)
     expect(Object.keys(parts).filter((name) => /^ppt\/slides\/slide\d+\.xml$/.test(name))).toHaveLength(3)
-    expect(slideText(parts['ppt/slides/slide1.xml']!)).toEqual(['Quarterly'])
-    expect(slideText(parts['ppt/slides/slide3.xml']!)).toEqual(['Two'])
+    const deck = await readPptx(bytes)
+    expect(deck.slides[0]!.texts).toEqual(['Quarterly'])
+    expect(deck.slides[2]!.texts).toEqual(['Two'])
     expect(parts['docProps/core.xml']).toContain('<dc:title>Quarterly</dc:title>')
     // PptxGenJS's own defaults stay out of the file.
     expect(parts['docProps/core.xml']).not.toContain('PptxGenJS')
@@ -73,7 +75,7 @@ describe('writing', () => {
     )
     expect(layouts.some(([, xml]) => xml.includes('<a:t>Footer</a:t>') && xml.includes('F35815'))).toBe(true)
     expect(Object.keys(parts).some((name) => name.startsWith('ppt/charts/chart'))).toBe(true)
-    expect(slideText(parts['ppt/slides/slide1.xml']!)).toEqual(expect.arrayContaining(['Region', 'North', '12']))
+    expect((await readPptx(bytes)).slides[0]!.texts).toEqual(expect.arrayContaining(['Region', 'North', '12']))
     expect(Object.values(parts).some((xml) => xml.includes('Speak slowly'))).toBe(true)
     expect(parts['ppt/presentation.xml']).toContain('name="Results"')
   })

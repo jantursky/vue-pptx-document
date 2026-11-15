@@ -1,8 +1,14 @@
+import { resolve } from 'node:path'
+
 import vue from '@vitejs/plugin-vue'
 import { defineConfig } from 'vitest/config'
 
 export default defineConfig({
   plugins: [vue()],
+  resolve: {
+    // The example decks import the library by name, like an app does.
+    alias: [{ find: /^vue-pptx-document$/, replacement: resolve(import.meta.dirname, 'src/index.ts') }],
+  },
   test: {
     environment: 'happy-dom',
     include: ['test/**/*.test.ts'],
@@ -13,7 +19,7 @@ export default defineConfig({
       // The CLI runs in a child process in its tests, where coverage can't see it.
       exclude: ['src/index.ts', 'src/cli.ts', 'src/components/types.ts'],
       reporter: ['text-summary', 'text', 'html', 'lcov'],
-      thresholds: { statements: 92, branches: 78, functions: 95, lines: 95 },
+      thresholds: { statements: 92, branches: 80, functions: 95, lines: 95 },
     },
   },
 })

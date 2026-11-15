@@ -17,6 +17,8 @@ const sources = [
   },
   // The docs put the file name after the language: ```vue App.vue
   { file: 'apps/docs/docs/getting-started.mdx', dir: 'getting-started', pattern: /```vue (\S+\.vue)\n([\s\S]*?)```/g },
+  // The testing guide's Vitest files.
+  { file: 'apps/docs/docs/guides/testing.mdx', dir: 'testing', pattern: /```ts (\S+\.test\.ts)\n([\s\S]*?)```/g },
 ]
 
 const stale = []
@@ -24,7 +26,8 @@ for (const { file, dir, pattern } of sources) {
   const text = readFileSync(join(root, file), 'utf8')
   for (const [, name, code] of text.matchAll(pattern)) {
     const target = join(out, dir, name)
-    const content = `<!--\n  Generated from ${file} by scripts/samples.js; edit the source, then run\n  \`bun run sync:samples\`. \`bun run typecheck\` compiles it against the library.\n-->\n${code}`
+    const note = `Generated from ${file} by scripts/samples.js; edit the source, then run\n  \`bun run sync:samples\`. \`bun run typecheck\` compiles it against the library.`
+    const content = name.endsWith('.vue') ? `<!--\n  ${note}\n-->\n${code}` : `/*\n  ${note}\n*/\n${code}`
     if (existsSync(target) && readFileSync(target, 'utf8') === content) continue
     if (check) {
       stale.push(relative(root, target))

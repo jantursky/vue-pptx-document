@@ -1,0 +1,81 @@
+---
+title: Testing your decks
+description: Assert on the .pptx files your app generates with readPptx, findText and toOutline from vue-pptx-document/testing.
+---
+
+Decks are files, so a test has to open one to check it. `vue-pptx-document/testing` reads a `.pptx` back with the same code as the [importer](/guides/import) and hands you plain data: the slides, their texts and notes, and the XML of every slide part. It needs no DOM, so it runs in Node, in Vitest and in Jest.
+
+## Check the texts
+
+Render the deck with `renderToBuffer()`, read it back with `readPptx()`, and assert on `slides[n].texts`. Texts come in reading order, which is the order of the objects on the slide. Paragraphs of one text box are joined by `\n`.
+
+```ts deck.test.ts
+import { expect, it } from 'vitest'
+import { h } from 'vue'
+import { Presentation, Slide, Text, renderToBuffer } from 'vue-pptx-document'
+import { readPptx } from 'vue-pptx-document/testing'
+
+const Hello = {
+  render: () =>
+    h(Presentation, { title: 'Hello' }, () =>
+      h(Slide, null, () => h(Text, { x: 0.5, y: 2, w: 9, h: 1 }, () => 'Hello from a test')),
+    ),
+}
+
+it('writes the greeting', async () => {
+  const deck = await readPptx(await renderToBuffer(Hello, {}))
+
+  expect(deck.slides).toHaveLength(1)
+  expect(deck.slides[0]?.texts).toEqual(['Hello from a test'])
+})
+```
+
+## Find a slide
+
+`findText()` returns the 1-based numbers of the slides that hold a string or match a regular expression.
+
+```ts find.test.ts
+import { readFile } from 'node:fs/promises'
+
+import { expect, it } from 'vitest'
+import { findText, readPptx } from 'vue-pptx-document/testing'
+
+it('puts the revenue table on slide 2', async () => {
+  const deck = await readPptx(await readFile('report.pptx'))
+
+  expect(findText(deck, 'Revenue')).toEqual([2])
+  expect(findText(deck, /^Q[1-4] 2026$/)).toEqual([1])
+})
+```
+
+## Snapshot a deck
+
+`toOutline()` writes one line per object: its kind, its frame in inches rounded to 0.01, and its text. Images show their size in bytes instead of their data. The same deck always gives the same string, so it works with `toMatchInlineSnapshot()`.
+
+```ts outline.test.ts
+import { expect, it } from 'vitest'
+import { h } from 'vue'
+import { Presentation, Slide, Text, renderToBuffer } from 'vue-pptx-document'
+import { readPptx, toOutline } from 'vue-pptx-document/testing'
+
+const Hello = {
+  render: () => h(Presentation, null, () => h(Slide, null, () => h(Text, { x: 0.5, y: 2, w: 9, h: 1 }, () => 'Hello'))),
+}
+
+it('keeps its layout', async () => {
+  const outline = toOutline(await readPptx(await renderToBuffer(Hello, {})))
+
+  expect(outline).toMatchInlineSnapshot(`
+    "Slide 1
+      text @ 0.5,2 9×1: Hello"
+  `)
+})
+```
+
+## Check the XML
+
+`slides[n].xml` is the slide part as written. Use it for what the model doesn't hold, such as an exact attribute. Prefer the texts and the outline where they are enough, since they don't change when the file's XML does.
+
+## Round trips
+
+The importer reads every file the library writes. This repository renders each demo and docs deck, imports it and compares it to the model it came from, so a change that the writer and the importer disagree on fails CI. The same check works for your own decks: render, read with `readPptx()`, and compare `deck.model` to `renderToModel()`.

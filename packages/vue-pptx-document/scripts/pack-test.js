@@ -7,13 +7,15 @@ import { join, resolve } from 'node:path'
 
 const packageDir = resolve(import.meta.dirname, '..')
 const dir = mkdtempSync(join(tmpdir(), 'vue-pptx-document-pack-'))
-const run = (command, args, cwd) => execFileSync(command, args, { cwd, encoding: 'utf8', stdio: 'pipe' })
+// npm and npx are .cmd files on Windows, which only a shell can start.
+const run = (command, args, cwd) =>
+  execFileSync(command, args, { cwd, encoding: 'utf8', stdio: 'pipe', shell: process.platform === 'win32' })
 
 try {
   const [packed] = JSON.parse(run('npm', ['pack', '--json', '--pack-destination', dir], packageDir))
   const files = packed.files.map((file) => file.path).sort()
   const allowed =
-    /^(dist\/(index|import|cli)\.(js|js\.map|d\.ts)|dist\/chunks\/[\w.-]+\.(js|js\.map)|dist\/[\w/.-]+\.d\.ts|README\.md|CHANGELOG\.md|LICENSE|package\.json)$/
+    /^(dist\/(index|import|testing|cli)\.(js|js\.map|d\.ts)|dist\/chunks\/[\w.-]+\.(js|js\.map)|dist\/[\w/.-]+\.d\.ts|README\.md|CHANGELOG\.md|LICENSE|package\.json)$/
   const unexpected = files.filter((file) => !allowed.test(file))
   if (unexpected.length > 0) throw new Error(`Unexpected files in the tarball: ${unexpected.join(', ')}`)
   console.log(`tarball: ${packed.filename}, ${files.length} files, ${(packed.size / 1024).toFixed(1)} kB`)
@@ -27,6 +29,7 @@ try {
 import { h } from 'vue'
 import { Presentation, Slide, Text, renderToBuffer } from 'vue-pptx-document'
 import { pptxToVue } from 'vue-pptx-document/import'
+import { findText, readPptx } from 'vue-pptx-document/testing'
 
 const Hello = { render: () => h(Presentation, { title: 'Pack test' }, () => h(Slide, () => h(Text, { x: 1, y: 1, w: 8, h: 1 }, () => 'Hello'))) }
 const bytes = await renderToBuffer(Hello)
@@ -36,6 +39,9 @@ console.log('rendered ' + bytes.length + ' bytes from the installed package')
 const { code } = await pptxToVue(bytes)
 if (!code.includes('Hello')) throw new Error('The importer lost the text')
 console.log('imported it back as ' + code.split('\\n').length + ' lines of Vue')
+const readout = await readPptx(bytes)
+if (findText(readout, 'Hello').join() !== '1') throw new Error('The testing helpers lost the text')
+console.log('read it back with vue-pptx-document/testing')
 `,
   )
   console.log(run('node', ['consumer.js'], dir).trim())

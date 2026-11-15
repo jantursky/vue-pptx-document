@@ -1,0 +1,46 @@
+---
+title: Testing
+description: readPptx, findText and toOutline from vue-pptx-document/testing.
+---
+
+These come from the `vue-pptx-document/testing` entry point. See [Testing your decks](/guides/testing) for how to use them. The entry point loads the importer, not the preview, and the main entry never loads it.
+
+## readPptx
+
+```ts
+function readPptx(input: PptxInput, options?: ParseOptions): Promise<PptxReadout>
+```
+
+Reads a `.pptx` file for assertions. It takes the same inputs and options as [`parsePptx`](/reference/import#parsepptx). The shapes of the layout and master aren't copied onto the slides unless you pass `masterShapes: true`, so `texts` holds only what each slide holds.
+
+### PptxReadout
+
+| field      | type                 |                                            |
+| ---------- | -------------------- | ------------------------------------------ |
+| `model`    | `DeckModel`          | The deck as the importer reads it.         |
+| `slides`   | `PptxSlideReadout[]` | One entry per slide, in order.             |
+| `warnings` | `string[]`           | What the importer skipped or approximated. |
+
+### PptxSlideReadout
+
+| field   | type       |                                                                                                           |
+| ------- | ---------- | --------------------------------------------------------------------------------------------------------- |
+| `xml`   | `string`   | The slide's XML part, as written in the file.                                                             |
+| `texts` | `string[]` | Texts in reading order. Paragraphs of one text box are joined by `\n`. Table cells are listed one by one. |
+| `notes` | `string`   | The speaker notes, or an empty string.                                                                    |
+
+## findText
+
+```ts
+function findText(deck: { slides: PptxSlideReadout[] }, text: string | RegExp): number[]
+```
+
+Returns the 1-based numbers of the slides with a text that contains the string or matches the regular expression.
+
+## toOutline
+
+```ts
+function toOutline(deck: PptxReadout): string
+```
+
+Returns a stable multi-line outline: a `Slide n` line, then one line per object with its kind, frame rounded to 0.01 inch and text, and a `notes:` line when the slide has notes. It holds no ids, dates or image data.

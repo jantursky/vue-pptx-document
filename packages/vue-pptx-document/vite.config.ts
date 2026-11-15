@@ -24,7 +24,12 @@ export default defineConfig({
   build: {
     lib: {
       // The importer and the CLI are entries of their own, so apps that only render never load them.
-      entry: { index: root('src/index.ts'), import: root('src/import/index.ts'), cli: root('src/cli.ts') },
+      entry: {
+        index: root('src/index.ts'),
+        import: root('src/import/index.ts'),
+        testing: root('src/testing/index.ts'),
+        cli: root('src/cli.ts'),
+      },
       // ESM only, like Vue's own runtime build and yoga-layout.
       formats: ['es'],
       fileName: (_format, name) => `${name}.js`,
