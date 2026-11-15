@@ -2,6 +2,8 @@ version: 2
 updates:
   - package-ecosystem: bun
     directory: /
+    # Keeps peer ranges (vue ^3.5.0) from being raised to each new release.
+    versioning-strategy: increase-if-necessary
     schedule:
       interval: weekly
     groups:
