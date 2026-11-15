@@ -17,7 +17,8 @@ import type { Row } from './report'
 
 defineProps<{ rows: Row[]; quarter: string }>()
 
-const status = { 'On track': '#2A8A62', 'At risk': '#D64545', Done: '#737373' } as const
+const statusColor = { 'On track': '#2A8A62', 'At risk': '#D64545', Done: '#737373' } as const
+const colorOf = (s: Row['status']) => statusColor[s]
 </script>
 
 <template>
@@ -57,7 +58,8 @@ const status = { 'On track': '#2A8A62', 'At risk': '#D64545', Done: '#737373' } 
           quarter</Paragraph
         >
         <Paragraph bullet>
-          <Run :color="status['At risk']" bold>{{ rows.filter((row) => row.status === 'At risk').length }} at risk</Run
+          <Run :color="statusColor['At risk']" bold
+            >{{ rows.filter((row) => row.status === 'At risk').length }} at risk</Run
           >, with owners named in the table
         </Paragraph>
         <Paragraph :bullet="{ type: 'number' }" :indent-level="1">Review scope in week one</Paragraph>
@@ -88,7 +90,7 @@ const status = { 'On track': '#2A8A62', 'At risk': '#D64545', Done: '#737373' } 
         <TableRow v-for="row in rows" :key="row.team">
           <TableCell>{{ row.team }}</TableCell>
           <TableCell>{{ row.owner }}</TableCell>
-          <TableCell bold :color="status[row.status]">{{ row.status }}</TableCell>
+          <TableCell bold :color="colorOf(row.status)">{{ row.status }}</TableCell>
         </TableRow>
       </Table>
     </Slide>
