@@ -89,6 +89,8 @@ await writeFile(
 )
 ```
 
+In Node, an image `src` that isn't a data URI is fetched (http and https) or read from disk. If decks are built from input you don't trust, pass `allowFiles: false` and a `loadImage` function that only fetches from hosts you trust: see [Images and untrusted input](https://vue-pptx-document-docs.vercel.app/guides/server#images-and-untrusted-input).
+
 ## Import a .pptx as Vue code
 
 `vue-pptx-document/import` reads a PowerPoint file (text with its runs and bullets, shapes, pictures, tables, charts, backgrounds, sections and notes) and writes a component that renders the same slides:

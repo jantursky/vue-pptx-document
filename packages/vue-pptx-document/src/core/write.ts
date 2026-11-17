@@ -2,6 +2,7 @@ import type PptxGenJS from 'pptxgenjs'
 
 import { at, createContext, inContext, locate, warn, type DiagnosticOptions } from './diagnostics'
 import type { Background, DeckModel, SlideModel, SlideObject } from './model'
+import { loadSources, type SourceOptions } from './sources'
 
 type Pptx = PptxGenJS
 type Slide = PptxGenJS.Slide
@@ -22,9 +23,15 @@ export const loadPptxGenJS = (): Promise<new () => Pptx> => {
 /** PptxGenJS writes into the option objects it gets, so each call gets its own copy. */
 const copy = <T>(value: T): T => (value === undefined ? value : (JSON.parse(JSON.stringify(value)) as T))
 
+/** PptxGenJS takes a background's file extension from its path, so data gets a path to match. */
+const backgroundData = (src: string): PptxGenJS.BackgroundProps => ({
+  data: src.slice(5),
+  path: `background.${/^data:image\/(jpeg|gif|svg)/.exec(src)?.[1] ?? 'png'}`,
+})
+
 const background = (value: Background | undefined): PptxGenJS.BackgroundProps | undefined => {
   if (!value) return undefined
-  if (value.src) return value.src.startsWith('data:') ? { data: value.src.slice(5) } : { path: value.src }
+  if (value.src) return value.src.startsWith('data:') ? backgroundData(value.src) : { path: value.src }
   return { color: value.color, transparency: value.transparency }
 }
 
@@ -215,7 +222,7 @@ const build = (deck: Pptx, model: DeckModel): Pptx => {
 
 export type OutputType = 'blob' | 'arraybuffer' | 'uint8array' | 'base64' | 'nodebuffer'
 
-export interface WriteOptions extends DiagnosticOptions {
+export interface WriteOptions extends DiagnosticOptions, SourceOptions {
   /** Deflate the zip. On by default; turn it off for faster writes of large decks. */
   compression?: boolean
 }
@@ -279,8 +286,9 @@ const finalize = async (bytes: Uint8Array, patches: Patch[], outputType: OutputT
 }
 
 export const writeModel = async (model: DeckModel, outputType: OutputType, options: WriteOptions = {}) => {
-  const { compression, ...diagnostics } = options
-  const deck = await toPptxGenJS(model, diagnostics)
+  const { compression, loadImage, allowFiles, ...diagnostics } = options
+  const loaded = await loadSources(model, { ...diagnostics, loadImage, allowFiles })
+  const deck = await toPptxGenJS(loaded, diagnostics)
   const patches = pending.get(deck) ?? []
   try {
     if (patches.length === 0) return await deck.write({ outputType, compression: compression ?? true })

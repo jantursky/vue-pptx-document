@@ -5,6 +5,7 @@ export type WarningCode =
   | 'unknown-master'
   | 'master-object-dropped'
   | 'missing-src'
+  | 'load-failed'
   | 'unknown-color'
   | 'unknown-prop'
 

@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import { defineComponent, h } from 'vue'
 
-import { Image, Presentation, Slide, Text, renderToBuffer, renderToModel, type PptxWarning } from '../../src'
+import { Media, Presentation, Slide, Text, renderToBuffer, renderToModel, type PptxWarning } from '../../src'
 import { at, createContext, inContext, locate, warn } from '../../src/core/diagnostics'
 
 // Text straight inside a <Slide> is dropped: the simplest deck that warns.
@@ -83,19 +83,19 @@ describe('diagnostics in renders', () => {
     log.mockRestore()
   })
 
-  it('names the slide and object of an image that fails to load', async () => {
+  it('names the slide and object of a media file that fails to load', async () => {
     const Broken = defineComponent(
       () => () =>
         h(Presentation, null, () => [
           h(Slide),
           h(Slide),
-          h(Slide, null, () => [h(Image, { x: 0, y: 0, w: 1, h: 1, src: '/no/such/picture.png' })]),
+          h(Slide, null, () => [h(Media, { x: 0, y: 0, w: 1, h: 1, src: '/no/such/movie.mp4' })]),
         ]),
     )
     vi.spyOn(console, 'error').mockImplementation(() => undefined)
     const error: unknown = await renderToBuffer(Broken).catch((caught: unknown) => caught)
     expect(error).toBeInstanceOf(Error)
-    expect((error as Error).message).toMatch(/slide 3, <Image>/)
+    expect((error as Error).message).toMatch(/slide 3, <Media>/)
     vi.restoreAllMocks()
   })
 })
