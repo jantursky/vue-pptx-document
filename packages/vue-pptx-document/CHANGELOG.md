@@ -4,6 +4,21 @@ All notable changes to `vue-pptx-document` are listed here. The format follows [
 
 ## [Unreleased]
 
+### Added
+
+- `loadImage` in the write options loads every picture, background and media cover that isn't a data URI yet, once per distinct source, and resolves to a base64 data URI. It works in Node and in the browser.
+- `allowFiles` in the write options. On by default; `allowFiles: false` keeps Node from reading images and media files from the file system.
+- The warning code `load-failed`, for an image that can't be loaded and for a file that isn't allowed.
+
+### Changed
+
+- In Node, images are loaded before PptxGenJS writes the file. An image that fails is left out with a `load-failed` warning instead of rejecting the render; `strict: true` still rejects. A JPEG or GIF background given as a data URI is stored with its own file extension instead of `.png`.
+- The main entry grows to 28.7 kB gzipped with the image loading (budget raised from 28 to 29 kB; the preview components' budget from 27 to 28 kB).
+
+### Security
+
+- In Node, http(s) image URLs are fetched with a 10 second timeout, a 10 MB cap, redirects followed and the status and `image/*` content type checked, so an error page is no longer embedded as a picture. Plain `http:` URLs now load too. A deck built from untrusted input should pass `allowFiles: false`, so a `src` such as `/etc/passwd` is never read, and a `loadImage` that only fetches from trusted hosts.
+
 ## [1.4.0] - 2026-11-15
 
 ### Added

@@ -87,15 +87,19 @@ Builds a PptxGenJS presentation from a model and writes it. `outputType` is one 
 function toPptxGenJS(model: DeckModel): Promise<PptxGenJS>
 ```
 
-Builds the PptxGenJS presentation for a model without writing it, so you can add to it with PptxGenJS's own API and call `write()` or `writeFile()` yourself. PptxGenJS is loaded on the first call.
+Builds the PptxGenJS presentation for a model without writing it, so you can add to it with PptxGenJS's own API and call `write()` or `writeFile()` yourself. PptxGenJS is loaded on the first call. Image sources go to PptxGenJS as they are: `loadImage` and `allowFiles` only apply to `writeModel` and the render functions.
 
 ## WriteOptions
 
 | option        | type                             | default |                                                                                                             |
 | ------------- | -------------------------------- | ------- | ----------------------------------------------------------------------------------------------------------- |
 | `compression` | `boolean`                        | `true`  | Deflate the zip. Off: faster writes, larger files.                                                          |
+| `loadImage`   | `ImageLoader`                    |         | Loads an image source into a base64 data URI. See [Server](/guides/server#images-and-untrusted-input).      |
+| `allowFiles`  | `boolean`                        | `true`  | Let Node read images and media from the file system. Turn it off for untrusted input.                       |
 | `onWarn`      | `(warning: PptxWarning) => void` |         | Receives each warning instead of the console.                                                               |
 | `strict`      | `boolean`                        | `false` | Reject on the first warning. See [Troubleshooting](/guides/troubleshooting#warnings-codes-and-strict-mode). |
+
+`ImageLoader` is `(src: string) => Promise<string>`. It gets every picture, background and media cover `src` that isn't a data URI yet, once per distinct value, and resolves to a base64 `data:image/...` URI. `loadImage` and `allowFiles` alone are `SourceOptions`.
 
 `onWarn` and `strict` alone are `DiagnosticOptions`, which `renderToModel`, `pptx`, `useSlides` and `usePptx` take too. A [PptxWarning](/reference/types#pptxwarning) is `{ code, message, slide?, object? }`.
 

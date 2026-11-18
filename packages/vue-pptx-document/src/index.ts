@@ -34,6 +34,8 @@ export {
 } from './core/pptx'
 export { LAYOUTS, resolve, type LayoutName } from './core/resolve'
 export { toPptxGenJS, writeModel, type OutputType, type WriteOptions } from './core/write'
+export type { SourceOptions } from './core/sources'
+export type { ImageLoader } from './core/load-image'
 export { toInches, type Length } from './core/units'
 export { toHex } from './core/colors'
 export type { DiagnosticOptions, PptxWarning, WarningCode } from './core/diagnostics'

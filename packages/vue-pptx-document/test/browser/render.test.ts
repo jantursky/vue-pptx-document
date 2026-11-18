@@ -1,7 +1,18 @@
 import { describe, expect, it } from 'vitest'
 import { defineComponent, effectScope, h } from 'vue'
 
-import { Chart, Presentation, PPTX_MIME, Slide, Text, View, renderToBlob, renderToModel, usePptx } from '../../src'
+import {
+  Chart,
+  Image,
+  Presentation,
+  PPTX_MIME,
+  Slide,
+  Text,
+  View,
+  renderToBlob,
+  renderToModel,
+  usePptx,
+} from '../../src'
 
 const Deck = defineComponent(
   () => () =>
@@ -27,6 +38,28 @@ describe('in a real browser', () => {
     const blob = await renderToBlob(Deck)
     expect(blob.type).toBe(PPTX_MIME)
     expect(blob.size).toBeGreaterThan(5000)
+    expect([...(await header(blob))]).toEqual([0x50, 0x4b])
+  })
+
+  it('loads images through loadImage without touching Node modules', async () => {
+    const png =
+      'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFBQIAX8jx0gAAAABJRU5ErkJggg=='
+    const sources: string[] = []
+    const loadImage = (src: string) => {
+      sources.push(src)
+      return Promise.resolve(png)
+    }
+    const Pictures = defineComponent(
+      () => () =>
+        h(Presentation, null, () =>
+          h(Slide, null, () => [
+            h(Image, { src: 'logo.png', x: 0, y: 0, w: 1, h: 1 }),
+            h(Image, { src: png, x: 1, y: 0, w: 1, h: 1 }),
+          ]),
+        ),
+    )
+    const blob = await renderToBlob(Pictures, undefined, { loadImage, allowFiles: false, strict: true })
+    expect(sources).toEqual(['logo.png'])
     expect([...(await header(blob))]).toEqual([0x50, 0x4b])
   })
 

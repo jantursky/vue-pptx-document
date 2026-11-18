@@ -63,7 +63,28 @@ In pages, `usePptx()` and `<Preview>` start on mount, so server rendering a page
 
 ## Images in Node
 
-In Node, an `<Image>` `src` may be a file path, which PptxGenJS reads from disk, besides a URL or a data URI. Paths resolve against the process's working directory.
+In Node, an `<Image>` `src` may be a file path, besides a URL or a data URI. Paths resolve against the process's working directory. Every picture, background and media cover is loaded before PptxGenJS writes the file: http(s) URLs are fetched with a 10 second timeout and a 10 MB cap, and only a successful `image/*` response is used; anything else is read from disk. An image that can't be loaded is left out with a `load-failed` warning, or rejects the render with `strict: true`.
+
+## Images and untrusted input
+
+When the deck comes from input you don't control, such as user data or generated content, a `src` like `/etc/passwd` would be read from the server's disk and a URL could point at an internal host. Turn off file access and load images yourself:
+
+```ts
+const file = await renderToBuffer(ReportDeck, props, {
+  allowFiles: false,
+  loadImage: async (src) => {
+    const url = new URL(src)
+    if (url.protocol !== 'https:' || url.hostname !== 'cdn.example.com') throw new Error('host not allowed')
+    const response = await fetch(url, { signal: AbortSignal.timeout(5000) })
+    const type = response.headers.get('content-type') ?? ''
+    if (!response.ok || !type.startsWith('image/')) throw new Error(`status ${response.status}`)
+    const bytes = Buffer.from(await response.arrayBuffer())
+    return `data:${type};base64,${bytes.toString('base64')}`
+  },
+})
+```
+
+`loadImage` gets every source that isn't a data URI yet, once per distinct value, and resolves to a base64 `data:image/...` URI. `allowFiles: false` also skips `<Media>` files with a local path. In the browser, `loadImage` works the same way; without it, PptxGenJS fetches the URLs.
 
 ## Text measurement in Node
 

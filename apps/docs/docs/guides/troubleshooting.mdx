@@ -24,10 +24,11 @@ Each warning is `{ code, message, slide?, object? }`. Match on `code`, since the
 | `unknown-master`        | A slide names a master that doesn't exist.                     |
 | `master-object-dropped` | An object a PptxGenJS master can't hold.                       |
 | `missing-src`           | An `<Image>` without `src`.                                    |
+| `load-failed`           | An image that failed to load, or a file that isn't allowed.    |
 | `unknown-color`         | A color that is neither a CSS color nor a theme color.         |
 | `unknown-prop`          | A prop the component doesn't know, in development builds only. |
 
-`usePptx`, `useSlides` and `<Preview @warn>` take the same options; the composables also return the latest render's `warnings`. Errors name the slide and object the same way, such as `ENOENT: no such file … (slide 3, <Image>)`.
+`usePptx`, `useSlides` and `<Preview @warn>` take the same options; the composables also return the latest render's `warnings`. Errors name the slide and object the same way, such as `ENOENT: no such file … (slide 3, <Media>)`.
 
 ## "The root component must render a single &lt;Presentation&gt;"
 

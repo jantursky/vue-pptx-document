@@ -4,7 +4,7 @@
     "path": "dist/index.js",
     "ignore": ["vue", "pptxgenjs", "yoga-layout", "jszip", "fast-xml-parser"],
     "gzip": true,
-    "limit": "28 kB"
+    "limit": "29 kB"
   },
   {
     "name": "Preview components (engines excluded)",
@@ -12,7 +12,7 @@
     "import": "{ Preview, SlidePreview }",
     "ignore": ["vue", "pptxgenjs", "yoga-layout", "jszip", "fast-xml-parser"],
     "gzip": true,
-    "limit": "27 kB"
+    "limit": "28 kB"
   },
   {
     "name": "With PptxGenJS and Yoga, which load on first use",

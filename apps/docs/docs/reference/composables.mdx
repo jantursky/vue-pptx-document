@@ -26,6 +26,8 @@ Renders the deck to a `.pptx` Blob and an object URL, and renders again after ch
 | `debounce`    | `number`                         | `300`   | Milliseconds to wait after a change before rendering again.          |
 | `auto`        | `boolean`                        | `true`  | Render on mount and after every change. `false`: only on `update()`. |
 | `compression` | `boolean`                        | `true`  | Deflate the zip.                                                     |
+| `loadImage`   | `ImageLoader`                    |         | Loads an image source into a base64 data URI.                        |
+| `allowFiles`  | `boolean`                        | `true`  | Let Node read images and media from the file system.                 |
 | `onWarn`      | `(warning: PptxWarning) => void` |         | Receives each warning instead of the console.                        |
 | `strict`      | `boolean`                        | `false` | Fail the render on the first warning.                                |
 
