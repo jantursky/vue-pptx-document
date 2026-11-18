@@ -197,8 +197,7 @@ const charts: ChartKind[] = ['bar', 'line', 'area']
       <fieldset class="card">
         <legend>{{ t.kpis }}</legend>
         <div class="table-head kpi-row" aria-hidden="true">
-          <span>{{ t.label }}</span
-          ><span>{{ t.value }}</span
+          <span>{{ t.label }}</span><span>{{ t.value }}</span
           ><span>{{ t.delta }}</span
           ><span />
         </div>
@@ -271,8 +270,7 @@ const charts: ChartKind[] = ['bar', 'line', 'area']
       <fieldset class="card">
         <legend>{{ t.regions }}</legend>
         <div class="table-head region-row" aria-hidden="true">
-          <span>{{ t.label }}</span
-          ><span>{{ t.revenue }}</span
+          <span>{{ t.label }}</span><span>{{ t.revenue }}</span
           ><span>{{ t.target }}</span
           ><span />
         </div>

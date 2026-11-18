@@ -109,8 +109,8 @@ const download = (): void => saveBlob(new Blob([code.value], { type: 'text/plain
 
     <template v-if="model && !busy">
       <div class="import-summary" role="status" data-import-summary>
-        <strong>{{ fileName }}</strong
-        >: {{ model.slides.length }} slides, {{ model.layout.width }} × {{ model.layout.height }} in
+        <strong>{{ fileName }}</strong>: {{ model.slides.length }} slides, {{ model.layout.width }} ×
+        {{ model.layout.height }} in
       </div>
       <ul v-if="warnings.length" class="warnings" aria-label="Import warnings">
         <li v-for="warning in warnings" :key="warning">{{ warning }}</li>
