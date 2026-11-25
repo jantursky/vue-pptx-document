@@ -230,3 +230,135 @@ describe('CLI', () => {
     expect(spawnSync('bun', [cli], { encoding: 'utf8' }).status).toBe(1)
   })
 })
+
+describe('structured warnings', () => {
+  const TwoSlides = defineComponent(
+    () => () =>
+      h(Presentation, null, () => [
+        h(Slide, null, () => h(Text, { x: 0, y: 0, w: 2, h: 1 }, () => 'One')),
+        h(Slide, null, () => h(Text, { x: 0, y: 0, w: 2, h: 1 }, () => 'Two')),
+      ]),
+  )
+
+  // A gradient-filled rectangle, as PowerPoint writes it.
+  const GRADIENT = `<p:sp><p:nvSpPr><p:cNvPr id="50" name="Gradient"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr>
+    <a:xfrm><a:off x="0" y="0"/><a:ext cx="914400" cy="914400"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom>
+    <a:gradFill><a:gsLst><a:gs pos="0"><a:srgbClr val="FF0000"/></a:gs><a:gs pos="100000"><a:srgbClr val="0000FF"/></a:gs></a:gsLst><a:lin ang="0"/></a:gradFill>
+    </p:spPr></p:sp>`
+
+  // A SmartArt frame: a graphic whose data URI names a diagram.
+  const SMARTART = `<p:graphicFrame><p:nvGraphicFramePr><p:cNvPr id="60" name="SmartArt"/><p:cNvGraphicFramePr/><p:nvPr/></p:nvGraphicFramePr>
+    <p:xfrm><a:off x="0" y="0"/><a:ext cx="914400" cy="914400"/></p:xfrm>
+    <a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/diagram"/></a:graphic></p:graphicFrame>`
+
+  /** The deck with `xml` added to the end of slide `slide`'s tree. */
+  const addToSlide = async (bytes: Uint8Array, slide: number, xml: string): Promise<Uint8Array> => {
+    const zip = await JSZip.loadAsync(bytes)
+    const part = `ppt/slides/slide${slide}.xml`
+    zip.file(part, (await zip.file(part)!.async('string')).replace('</p:spTree>', `${xml}</p:spTree>`))
+    return zip.generateAsync({ type: 'uint8array' })
+  }
+
+  it('locates a warning on its slide, and keeps the plain message in warnings', async () => {
+    const bytes = await addToSlide(await renderToBuffer(TwoSlides), 2, GRADIENT)
+    const { issues, warnings } = await parsePptx(bytes)
+    expect(issues).toEqual([
+      { code: 'import-fill', message: 'Gradient fills are imported as their first color.', slide: 2 },
+    ])
+    expect(warnings).toEqual(['Gradient fills are imported as their first color.'])
+  })
+
+  it('reports the same message once per slide in issues, and once in warnings', async () => {
+    let bytes = await renderToBuffer(TwoSlides)
+    bytes = await addToSlide(bytes, 1, SMARTART)
+    bytes = await addToSlide(bytes, 2, SMARTART)
+    const { issues, warnings } = await parsePptx(bytes)
+    expect(issues.map((issue) => issue.slide)).toEqual([1, 2])
+    expect(issues.every((issue) => issue.code === 'import-object')).toBe(true)
+    expect(warnings).toEqual(['SmartArt is not imported.'])
+  })
+
+  it('prints the slide number in front of each warning in the CLI', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'vue-pptx-'))
+    const input = join(dir, 'gradient.pptx')
+    writeFileSync(input, await addToSlide(await renderToBuffer(TwoSlides), 2, GRADIENT))
+    const cli = join(import.meta.dirname, '../../src/cli.ts')
+    const run = spawnSync('bun', [cli, 'import', input, '--no-images'], { encoding: 'utf8' })
+    expect(run.status).toBe(0)
+    expect(run.stderr).toContain('warning: slide 2: Gradient fills are imported as their first color.')
+  })
+})
+
+describe('document properties round trip', () => {
+  it('reads keywords, category, description and last editor back into the component', async () => {
+    const Described = defineComponent(
+      () => () =>
+        h(
+          Presentation,
+          {
+            title: 'Report',
+            author: 'Ada',
+            keywords: 'quarterly, report',
+            category: 'Finance',
+            description: 'Q3 & Q4',
+            lastModifiedBy: 'Grace',
+          },
+          () => h(Slide, null, () => h(Text, { x: 0, y: 0, w: 2, h: 1 }, () => 'Hi')),
+        ),
+    )
+    const { model } = await parsePptx(await renderToBuffer(Described))
+    expect(model.meta).toMatchObject({
+      keywords: 'quarterly, report',
+      category: 'Finance',
+      description: 'Q3 & Q4',
+      lastModifiedBy: 'Grace',
+    })
+    const code = modelToVue(model)
+    expect(code).toContain('keywords="quarterly, report"')
+    expect(code).toContain('category="Finance"')
+    expect(code).toContain('last-modified-by="Grace"')
+  })
+
+  it('does not write the author back as the last editor', async () => {
+    const { model } = await parsePptx(
+      await renderToBuffer(
+        defineComponent(
+          () => () =>
+            h(Presentation, { author: 'Ada' }, () =>
+              h(Slide, null, () => h(Text, { x: 0, y: 0, w: 2, h: 1 }, () => 'Hi')),
+            ),
+        ),
+      ),
+    )
+    expect(model.meta.lastModifiedBy).toBeUndefined()
+  })
+})
+
+describe('internal links', () => {
+  const Links = defineComponent(
+    () => () =>
+      h(Presentation, null, () => [
+        h(Slide, null, () =>
+          h(Text, { x: 0, y: 0, w: 6, h: 1 }, () => [
+            'Go ',
+            h(Run, { href: { slide: 3 } }, () => 'to three'),
+            ' or ',
+            h(Run, { href: 'https://vuejs.org' }, () => 'to the site'),
+          ]),
+        ),
+        h(Slide, null, () => h(Text, { x: 0, y: 0, w: 2, h: 1 }, () => 'Two')),
+        h(Slide, null, () => h(Text, { x: 0, y: 0, w: 2, h: 1 }, () => 'Three')),
+      ]),
+  )
+
+  it('reads a jump to another slide as a slide number, and writes it as href', async () => {
+    const { model } = await parsePptx(await renderToBuffer(Links))
+    const runs = (model.slides[0]!.objects[0] as { runs: { text: string; options?: Record<string, unknown> }[] }).runs
+    expect(runs.find((run) => run.text === 'to three')!.options!.hyperlink).toEqual({ slide: 3 })
+    expect(runs.find((run) => run.text === 'to the site')!.options!.hyperlink).toEqual({ url: 'https://vuejs.org' })
+    const code = modelToVue(model)
+    expect(code).toContain(':href="{ slide: 3 }"')
+    expect(code).toContain('href="https://vuejs.org"')
+    expect(code).not.toContain('hyperlink=')
+  })
+})

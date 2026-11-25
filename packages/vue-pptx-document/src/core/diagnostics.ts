@@ -1,4 +1,7 @@
-/** What a warning is about. Match on these rather than on the wording, which may change. */
+/**
+ * What a warning is about. Match on these rather than on the wording, which may change. The union
+ * grows in minor releases, so a `switch` over it needs a `default` branch.
+ */
 export type WarningCode =
   | 'dropped-text'
   | 'misplaced-object'
@@ -8,6 +11,16 @@ export type WarningCode =
   | 'load-failed'
   | 'unknown-color'
   | 'unknown-prop'
+  | 'unresolved-link'
+  | 'invalid-image'
+  | 'empty-chart'
+  | 'off-slide'
+  | 'import-fill'
+  | 'import-shape'
+  | 'import-media'
+  | 'import-chart'
+  | 'import-object'
+  | 'import-picture'
 
 export interface PptxWarning {
   code: WarningCode

@@ -1,7 +1,7 @@
 import type PptxGenJS from 'pptxgenjs'
 
 import { at, createContext, inContext, locate, warn, type DiagnosticOptions } from './diagnostics'
-import type { Background, DeckModel, SlideModel, SlideObject } from './model'
+import type { Background, DeckMeta, DeckModel, SlideModel, SlideObject } from './model'
 import { loadSources, type SourceOptions } from './sources'
 
 type Pptx = PptxGenJS
@@ -252,14 +252,47 @@ const locateSource = (error: unknown, model: DeckModel): Error => {
 const escapeXml = (value: string): string =>
   value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 
+/** The document properties PptxGenJS has no setter for, with the element each one is written to. */
+const CORE_FIELDS = [
+  ['cp:keywords', 'keywords'],
+  ['cp:category', 'category'],
+  ['dc:description', 'description'],
+  ['cp:lastModifiedBy', 'lastModifiedBy'],
+] as const
+
+/**
+ * Sets each given property in `docProps/core.xml`: an element that is already there is replaced, so
+ * there is only ever one, and the rest are added before the closing tag. The schema takes them in any order.
+ */
+const patchCoreProperties = (xml: string, meta: DeckMeta): string => {
+  let out = xml
+  for (const [tag, key] of CORE_FIELDS) {
+    const value = meta[key]
+    if (value === undefined) continue
+    out = out.replace(new RegExp(`<${tag}(?:\\s[^>]*)?(?:/>|>[\\s\\S]*?</${tag}>)`, 'g'), '')
+    out = out.replace('</cp:coreProperties>', `<${tag}>${escapeXml(value)}</${tag}></cp:coreProperties>`)
+  }
+  return out
+}
+
 /**
  * Fixes what PptxGenJS can't write: empty descriptions for decorative images (it falls back to the
  * image's path or data) and the header row flag of tables. The zip is only opened when a deck has such objects.
  */
-const finalize = async (bytes: Uint8Array, patches: Patch[], outputType: OutputType, compression: boolean) => {
+const finalize = async (
+  bytes: Uint8Array,
+  patches: Patch[],
+  outputType: OutputType,
+  compression: boolean,
+  meta?: DeckMeta,
+) => {
   const { default: JSZip } = await import('jszip')
   const zip = await JSZip.loadAsync(bytes)
   const kinds = { image: 'Picture', table: 'Table' }
+  if (meta) {
+    const core = await zip.file('docProps/core.xml')?.async('string')
+    if (core !== undefined) zip.file('docProps/core.xml', patchCoreProperties(core, meta))
+  }
   for (const path of Object.keys(zip.files).filter((name) => /^ppt\/slides\/slide\d+\.xml$/.test(name))) {
     let xml = (await zip.file(path)?.async('string')) ?? ''
     const before = xml
@@ -290,10 +323,11 @@ export const writeModel = async (model: DeckModel, outputType: OutputType, optio
   const loaded = await loadSources(model, { ...diagnostics, loadImage, allowFiles })
   const deck = await toPptxGenJS(loaded, diagnostics)
   const patches = pending.get(deck) ?? []
+  const core = CORE_FIELDS.some(([, key]) => model.meta[key] !== undefined) ? model.meta : undefined
   try {
-    if (patches.length === 0) return await deck.write({ outputType, compression: compression ?? true })
+    if (patches.length === 0 && !core) return await deck.write({ outputType, compression: compression ?? true })
     const bytes = (await deck.write({ outputType: 'uint8array', compression: compression ?? true })) as Uint8Array
-    return await finalize(bytes, patches, outputType, compression ?? true)
+    return await finalize(bytes, patches, outputType, compression ?? true, core)
   } catch (error) {
     throw locateSource(error, model)
   }

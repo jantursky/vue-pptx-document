@@ -23,7 +23,7 @@ const SOURCES = {
   SHAPE: ['T.ShapeProps', 'P.ShapeProps', 'P.TextPropsOptions'],
   IMAGE: ['T.ImageProps', 'P.ImageProps'],
   TABLE: ['T.TableProps', 'P.TableProps', 'P.TableCellProps'],
-  TABLE_ROW: ['T.TableCellProps', 'P.TableCellProps'],
+  TABLE_ROW: ['T.TableRowProps', 'P.TableCellProps'],
   TABLE_CELL: ['T.TableCellProps', 'P.TableCellProps'],
   CHART: ['T.ChartProps'],
   MEDIA: ['T.MediaProps', 'P.MediaProps'],

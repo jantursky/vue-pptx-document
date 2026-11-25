@@ -195,6 +195,7 @@ interface PptxWarning {
   object?: string // such as '<Image>'
 }
 
+// Open: new codes arrive in minor releases, so a switch over it needs a default branch.
 type WarningCode =
   | 'dropped-text'
   | 'misplaced-object'
@@ -204,6 +205,21 @@ type WarningCode =
   | 'load-failed'
   | 'unknown-color'
   | 'unknown-prop'
+  | 'invalid-image'
+  | 'empty-chart'
+  | 'off-slide'
+  | 'unresolved-link'
+  | 'import-fill'
+  | 'import-shape'
+  | 'import-media'
+  | 'import-chart'
+  | 'import-object'
+  | 'import-picture'
+
+interface SlideLink {
+  slide: string | number // a 1-based number, or the title or section of a slide
+  tooltip?: string
+}
 
 interface DiagnosticOptions {
   onWarn?: (warning: PptxWarning) => void

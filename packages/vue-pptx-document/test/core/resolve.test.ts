@@ -268,3 +268,59 @@ describe('images', () => {
     warn.mockRestore()
   })
 })
+
+describe('slide links', () => {
+  // Three slides: the first links by name, the second by a missing number, the third by title.
+  const deck = defineComponent(
+    () => () =>
+      h(Presentation, null, () => [
+        h(Slide, { title: 'Intro' }, () => h(Text, { href: { slide: 'Appendix' } }, () => 'to appendix')),
+        h(Slide, { section: 'Appendix' }, () => h(Text, { href: { slide: 99 } }, () => 'to nowhere')),
+        h(Slide, { title: 'Pricing', section: 'Appendix' }, () => [
+          h(Text, { href: { slide: 'Intro', tooltip: 'Back' } }, () => 'back'),
+          h(Text, { hyperlink: { slide: 2 } }, () => 'explicit'),
+        ]),
+      ]),
+  )
+
+  it('resolves names to slide numbers, and keeps numbers', async () => {
+    const warnings: unknown[] = []
+    const model = await renderToModel(deck, {}, { onWarn: (warning) => warnings.push(warning) })
+    const links = model.slides.map((slide) =>
+      slide.objects.map((object) => (object.options as { hyperlink?: unknown }).hyperlink),
+    )
+    // "Appendix" has no title, so the first slide with that section wins: slide 2.
+    expect(links[0]).toEqual([{ slide: 2 }])
+    // "Intro" is a title: slide 1. A number that is set is kept.
+    expect(links[2]).toEqual([{ slide: 1, tooltip: 'Back' }, { slide: 2 }])
+    expect(warnings).toHaveLength(1)
+  })
+
+  it('warns unresolved-link on the slide of the link, and still writes the object', async () => {
+    const warnings: { code: string; slide?: number; message: string }[] = []
+    const model = await renderToModel(deck, {}, { onWarn: (warning) => warnings.push(warning) })
+    expect(warnings).toEqual([
+      expect.objectContaining({
+        code: 'unresolved-link',
+        slide: 2,
+        message: expect.stringContaining('slide 99'),
+      }),
+    ])
+    expect(model.slides[1]!.objects.map((object) => object.kind)).toEqual(['text'])
+    expect((model.slides[1]!.objects[0]!.options as { hyperlink?: unknown }).hyperlink).toBeUndefined()
+  })
+
+  it('names the missing target in a string link, and throws under strict', async () => {
+    const missing = defineComponent(
+      () => () =>
+        h(Presentation, null, () =>
+          h(Slide, null, () => h(Shape, { type: 'rect', x: 1, y: 1, w: 1, h: 1, href: { slide: 'Missing' } })),
+        ),
+    )
+    const warnings: { code: string; message: string }[] = []
+    await renderToModel(missing, {}, { onWarn: (warning) => warnings.push(warning) })
+    expect(warnings[0]).toMatchObject({ code: 'unresolved-link' })
+    expect(warnings[0]!.message).toContain('"Missing"')
+    await expect(renderToModel(missing, {}, { strict: true })).rejects.toThrow('unresolved-link')
+  })
+})

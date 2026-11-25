@@ -159,6 +159,16 @@ describe('links', () => {
     expect(wrapper.find('a').exists()).toBe(false)
     expect(wrapper.text()).toContain('Click')
   })
+
+  it('draws a slide link as plain text, not as an anchor', async () => {
+    const wrapper = await draw(() => [
+      h(Text, { x: 0, y: 0, w: 5, h: 1, href: { slide: 2 } }, () => 'Numbered'),
+      h(Text, { x: 0, y: 1, w: 5, h: 1, href: { slide: 'Pricing' } }, () => 'Named'),
+    ])
+    expect(wrapper.find('a').exists()).toBe(false)
+    expect(wrapper.text()).toContain('Numbered')
+    expect(wrapper.text()).toContain('Named')
+  })
 })
 
 describe('large decks', () => {

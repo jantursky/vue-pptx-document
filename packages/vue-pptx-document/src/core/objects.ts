@@ -34,13 +34,21 @@ const expandFillLine = (options: Options): Options => {
   return out
 }
 
-/** `href` is a shorthand for `hyperlink: { url }`; `underline` may be `true`. */
+/**
+ * `href` is a shorthand for `hyperlink`: a URL string, or `{ slide, tooltip? }` for a slide of the
+ * deck. An explicit `hyperlink` wins over it.
+ */
+export const expandHref = (options: Options): Options => {
+  const { href, ...rest } = options
+  if (href === undefined) return options
+  if (!href) return rest
+  const link = typeof href === 'string' ? { url: href } : href
+  return { ...rest, hyperlink: { ...link, ...(rest.hyperlink as object | undefined) } }
+}
+
+/** `href` is a shorthand for `hyperlink`; `underline` may be `true`. */
 const expandRunShorthands = (options: Options): Options => {
-  const out = { ...options }
-  if (typeof out.href === 'string') {
-    out.hyperlink = { url: out.href, ...(out.hyperlink as object | undefined) }
-    delete out.href
-  }
+  const out = { ...expandHref(options) }
   if (out.underline === true) out.underline = { style: 'sng' }
   if (out.underline === false) delete out.underline
   return out
@@ -139,7 +147,10 @@ const cellOf = (value: unknown): TableCellModel => {
   if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean')
     return { text: String(value) }
   const cell = value as TableCellModel
-  return { text: cell.text ?? '', ...(cell.options ? { options: expandFillLine(cell.options as Options) } : {}) }
+  return {
+    text: cell.text ?? '',
+    ...(cell.options ? { options: expandFillLine(expandHref(cell.options as Options)) } : {}),
+  }
 }
 
 /** Table rows from the `rows` prop, or from `<TableRow>` and `<TableCell>` children. */
@@ -151,13 +162,14 @@ export const tableRows = (node: TreeNode): TableCellModel[][] => {
   const rows: TableCellModel[][] = []
   for (const row of node.children) {
     if (typeof row === 'string' || row.type !== TYPES.row) continue
-    const rowOptions = omit(row.props, GEOMETRY)
+    // A row's link reaches its cells; a cell's own link, expanded first, wins over it.
+    const rowOptions = expandHref(omit(row.props, GEOMETRY))
     const cells: TableCellModel[] = []
     for (const cell of row.children) {
       if (typeof cell === 'string' || cell.type !== TYPES.cell) continue
       const runs = trimRuns(collectRuns(cell.children))
       const plain = runs.every((run) => !run.options || Object.keys(run.options).length === 0)
-      const options = expandFillLine({ ...rowOptions, ...omit(cell.props, GEOMETRY) })
+      const options = expandFillLine({ ...rowOptions, ...expandHref(omit(cell.props, GEOMETRY)) })
       cells.push({
         text: plain ? runs.map((run) => run.text).join('') : runs,
         ...(Object.keys(options).length > 0 ? { options: options } : {}),
@@ -187,6 +199,13 @@ export const chartName = (value: unknown): ChartName => {
   return name
 }
 
+/** A data URI that isn't an image, or has no payload after its comma. */
+const isBadDataUri = (src: string): boolean => {
+  if (!src.startsWith('data:')) return false
+  const comma = src.indexOf(',')
+  return !src.startsWith('data:image/') || comma < 0 || comma === src.length - 1
+}
+
 const imageData = (src: string): PptxGenJS.DataOrPathProps =>
   src.startsWith('data:') ? { data: src.slice(5) } : { path: src }
 
@@ -207,7 +226,7 @@ export const toObject = (node: TreeNode, frame: Frame): SlideObject | undefined 
         kind: 'shape',
         frame,
         shape,
-        options: normalizeColors(expandFillLine(omit(props, [...GEOMETRY, 'type']))),
+        options: normalizeColors(expandFillLine(expandHref(omit(props, [...GEOMETRY, 'type'])))),
       }
     }
     case TYPES.image: {
@@ -217,11 +236,15 @@ export const toObject = (node: TreeNode, frame: Frame): SlideObject | undefined 
         warn('missing-src', '<Image> without a `src` is skipped.')
         return undefined
       }
+      if (isBadDataUri(src)) {
+        warn('invalid-image', '<Image> has a data URI with no image data; it is skipped.')
+        return undefined
+      }
       return {
         kind: 'image',
         frame,
         src,
-        options: { ...(omit(props, [...GEOMETRY, 'src']) as PptxGenJS.ImageProps), ...imageData(src) },
+        options: { ...(expandHref(omit(props, [...GEOMETRY, 'src'])) as PptxGenJS.ImageProps), ...imageData(src) },
       }
     }
     case TYPES.table: {
@@ -241,6 +264,17 @@ export const toObject = (node: TreeNode, frame: Frame): SlideObject | undefined 
       const type = combo
         ? (props.type as ComboChart[]).map((part) => ({ ...part, type: chartName(part.type) }))
         : chartName(props.type ?? 'bar')
+      // PptxGenJS writes an empty plot area for a chart without values, which PowerPoint reports as damaged.
+      const series = (
+        combo
+          ? (props.type as ComboChart[]).flatMap((part) => (part.data as ChartSeries[] | undefined) ?? [])
+          : props.data
+      ) as ChartSeries[] | undefined
+      const hasValues = Array.isArray(series) && series.some((item) => (item.values ?? []).length > 0)
+      if (!hasValues) {
+        warn('empty-chart', '<Chart> has no series with values; it is skipped.')
+        return undefined
+      }
       return {
         kind: 'chart',
         frame,

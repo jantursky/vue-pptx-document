@@ -20,6 +20,18 @@ export interface PositionProps {
   style?: FlexStyle
 }
 
+/** A link to another slide: its 1-based number, or the `title` or `section` of the slide. */
+export interface SlideLink {
+  slide: string | number
+  tooltip?: string
+}
+
+/** A `hyperlink` object. `slide` may also be a slide's title or section, resolved when the deck is built. */
+export type HyperlinkProp = Omit<PptxGenJS.HyperlinkProps, 'slide'> & { slide?: string | number }
+
+/** A URL, or a link to a slide of the same deck. */
+export type HrefProp = string | SlideLink
+
 export interface RunProps {
   bold?: boolean
   italic?: boolean
@@ -34,9 +46,9 @@ export interface RunProps {
   fontSize?: number
   charSpacing?: number
   transparency?: number
-  /** A shorthand for `hyperlink: { url }`. */
-  href?: string
-  hyperlink?: PptxGenJS.HyperlinkProps
+  /** A shorthand for `hyperlink`: a URL, or `{ slide, tooltip? }` for another slide. */
+  href?: HrefProp
+  hyperlink?: HyperlinkProp
   lang?: string
 }
 
@@ -88,7 +100,9 @@ export interface ShapeProps extends PositionProps {
   flipH?: boolean
   flipV?: boolean
   shadow?: PptxGenJS.ShadowProps
-  hyperlink?: PptxGenJS.HyperlinkProps
+  /** A URL or `{ slide, tooltip? }`; the same as `hyperlink`. */
+  href?: HrefProp
+  hyperlink?: HyperlinkProp
   [option: string]: unknown
 }
 
@@ -105,7 +119,9 @@ export interface ImageProps extends PositionProps {
   flipH?: boolean
   flipV?: boolean
   transparency?: number
-  hyperlink?: PptxGenJS.HyperlinkProps
+  /** A URL or `{ slide, tooltip? }`; the same as `hyperlink`. */
+  href?: HrefProp
+  hyperlink?: HyperlinkProp
   [option: string]: unknown
 }
 
@@ -143,6 +159,9 @@ export interface TableCellProps extends ParagraphProps {
   margin?: number | [number, number, number, number]
   [option: string]: unknown
 }
+
+/** A `<TableRow>`: the cell props it passes on to every cell that doesn't set its own. */
+export type TableRowProps = TableCellProps
 
 export type ChartType = ChartName | Lowercase<ChartName>
 
@@ -228,6 +247,14 @@ export interface PresentationProps {
   author?: string
   company?: string
   subject?: string
+  /** Words that describe the deck, for file search. Written as `cp:keywords`. */
+  keywords?: string
+  /** A category the deck belongs to, such as `Finance`. Written as `cp:category`. */
+  category?: string
+  /** A longer description than `subject`. Written as `dc:description`. */
+  description?: string
+  /** Who last edited the deck. Without it, the author stays the last editor, as before. */
+  lastModifiedBy?: string
   revision?: string | number
   rtl?: boolean
   headFontFace?: string

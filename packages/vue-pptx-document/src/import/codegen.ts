@@ -74,6 +74,22 @@ const escapeText = (text: string): string =>
 
 const escapeAttribute = (text: string): string => text.replace(/&/g, '&amp;').replace(/"/g, '&quot;')
 
+/**
+ * Writes a link as the `href` shorthand the components take: a plain URL, or `{ slide }` for a
+ * jump to another slide. A link with a tooltip on a URL keeps the `hyperlink` form, which holds it.
+ */
+const withLinkShorthand = (props: Options): Options => {
+  const link = props.hyperlink as { url?: unknown; slide?: unknown; tooltip?: unknown } | undefined
+  if (!link || typeof link !== 'object') return props
+  const keys = Object.keys(link).filter((key) => link[key as keyof typeof link] !== undefined)
+  const { hyperlink: _, ...rest } = props
+  if (keys.length === 1 && keys[0] === 'url' && typeof link.url === 'string') return { ...rest, href: link.url }
+  if (link.slide !== undefined && keys.every((key) => key === 'slide' || key === 'tooltip')) {
+    return { ...rest, href: { slide: link.slide, ...(link.tooltip === undefined ? {} : { tooltip: link.tooltip }) } }
+  }
+  return props
+}
+
 class Writer {
   readonly constants: string[] = []
   private readonly names = new Map<string, string>()
@@ -98,7 +114,7 @@ class Writer {
   /** Attributes for a component: strings as-is, everything else bound. */
   attributes(props: Options, hoistAs = 'value'): string {
     const out: string[] = []
-    for (const [key, raw] of Object.entries(props)) {
+    for (const [key, raw] of Object.entries(withLinkShorthand(props))) {
       if (raw === undefined || INTERNAL.has(key)) continue
       const value = cssColors(raw, key)
       const name = kebab(key)

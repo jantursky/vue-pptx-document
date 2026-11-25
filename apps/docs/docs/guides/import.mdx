@@ -21,7 +21,7 @@ npx vue-pptx-document import deck.pptx -o Deck.vue
 | `--from <module>`  | Import the components from this module instead of `vue-pptx-document`.      |
 | `-h, --help`       | Show the help.                                                              |
 
-Warnings go to stderr as `warning: ...` lines, followed by a summary such as `deck.pptx: 12 slides written to Deck.vue`.
+Warnings go to stderr as `warning: slide 2: ...` lines, with the slide number when the warning has one, followed by a summary such as `deck.pptx: 12 slides written to Deck.vue`.
 
 With `--no-images`, copy the pictures next to your app yourself: a `.pptx` is a zip file, and they are in its `ppt/media` folder.
 
@@ -61,7 +61,7 @@ The demo app's [Import tab](https://vue-pptx-document.vercel.app/#import) does t
 
 ### The two steps
 
-`parsePptx(input, options?)` returns `{ model, warnings }` without writing code. The model can go straight to `<SlidePreview>`, to `writeModel()` to save it again, or to `modelToVue()`:
+`parsePptx(input, options?)` returns `{ model, warnings, issues }` without writing code. `warnings` is the list of distinct messages; `issues` holds the same messages as `{ code, message, slide? }`, one for each code, message and slide, so a script can tell a dropped gradient on slide 2 from one on slide 5. `pptxToVue` returns both too. The model can go straight to `<SlidePreview>`, to `writeModel()` to save it again, or to `modelToVue()`:
 
 ```ts
 import { parsePptx, modelToVue } from 'vue-pptx-document/import'
@@ -75,7 +75,7 @@ const code = modelToVue(model, { importFrom: '@/lib/slides', inlineLimit: 80 })
 | from the file                          | becomes                                                                                                                                                    |
 | -------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Slide size                             | `layout="16x9"`, `16x10`, `4x3` or `wide` when it matches, otherwise `{ width, height }`.                                                                  |
-| Title, author, subject, company        | `<Presentation>` props.                                                                                                                                    |
+| Title, author, subject, company        | `<Presentation>` props, with `keywords`, `category`, `description` and `last-modified-by` when the file sets them.                                         |
 | Text boxes and shapes with text        | `<Text>` with `<Paragraph>` and `<Run>`, keeping fonts, sizes, colors, bold, italic, underline, alignment, bullets, numbering, spacing and external links. |
 | Preset shapes and connectors           | `<Shape>` with fill, line and rotation.                                                                                                                    |
 | Pictures                               | `<Image>`, embedded or as `media/` paths.                                                                                                                  |
@@ -92,15 +92,17 @@ Masters themselves aren't recreated: the generated component has no `<Master>`, 
 
 ### What doesn't
 
-Each of these adds a message to `warnings`:
+Each of these adds a message to `warnings`, and an entry to `issues` with its code and slide:
 
-- Gradient fills are imported as their first color.
-- Picture and pattern fills are not imported.
-- Freeform shapes (custom geometry) become rectangles.
-- Video and audio become their poster picture.
-- Charts of a type PptxGenJS can't write are skipped.
-- SmartArt and other embedded objects are skipped.
-- EMF and WMF pictures are imported but don't show in a browser preview.
+- Gradient fills are imported as their first color (`import-fill`).
+- Picture and pattern fills are not imported (`import-fill`).
+- Freeform shapes (custom geometry) become rectangles (`import-shape`).
+- Video and audio become their poster picture (`import-media`).
+- Charts of a type PptxGenJS can't write are skipped (`import-chart`).
+- SmartArt and other embedded objects are skipped (`import-object`).
+- EMF and WMF pictures are imported but don't show in a browser preview (`import-picture`).
+
+Links that jump to another slide are imported as `href` with `{ slide }` and the slide's number, so they still jump to the same slide. Links to web addresses come through as `href` strings. See [Links](/guides/links).
 
 ## The generated code
 

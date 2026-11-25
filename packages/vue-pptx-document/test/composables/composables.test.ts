@@ -177,6 +177,17 @@ describe('warnings in composables', () => {
     scope.stop()
   })
 
+  it('usePptx exposes the extended codes, such as off-slide, with their slide and object', async () => {
+    const OffSlide = defineComponent(
+      () => () => h(Presentation, null, () => h(Slide, null, () => h(Text, { x: 12, y: 0, w: 2, h: 1 }, () => 'Away'))),
+    )
+    const scope = effectScope()
+    const result = scope.run(() => usePptx(OffSlide, {}, { auto: false, onWarn: () => undefined }))!
+    await result.update()
+    expect(result.warnings.value).toEqual([expect.objectContaining({ code: 'off-slide', slide: 1, object: '<Text>' })])
+    scope.stop()
+  })
+
   it('usePptx reports a strict failure as its error', async () => {
     const scope = effectScope()
     const result = scope.run(() => usePptx(Loose, { loose: true }, { auto: false, strict: true }))!

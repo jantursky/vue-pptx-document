@@ -14,6 +14,7 @@ import type {
   SlideProps,
   TableCellProps,
   TableProps,
+  TableRowProps,
   TextProps,
   ViewProps,
 } from './types'
@@ -104,7 +105,7 @@ export const Chart = primitive<ChartProps>('Chart', TYPES.chart, [
   'showDataTable',
 ])
 export const Table = primitive<TableProps>('Table', TYPES.table, ['autoPage', 'autoPageRepeatHeader', ...RUN_FLAGS])
-export const TableRow = primitive<TableCellProps>('TableRow', TYPES.row, RUN_FLAGS)
+export const TableRow = primitive<TableRowProps>('TableRow', TYPES.row, RUN_FLAGS)
 export const TableCell = primitive<TableCellProps>('TableCell', TYPES.cell, TEXT_FLAGS)
 export const Media = primitive<MediaProps>('Media', TYPES.media)
 export const Notes = primitive<Record<string, never>>('Notes', TYPES.notes)

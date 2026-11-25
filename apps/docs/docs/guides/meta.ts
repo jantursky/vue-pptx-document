@@ -6,6 +6,7 @@ export default defineMeta({
   pages: [
     'layout',
     'text',
+    'links',
     'charts',
     'tables',
     'masters',

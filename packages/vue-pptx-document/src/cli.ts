@@ -32,12 +32,15 @@ const main = async (): Promise<number> => {
     process.stdout.write(HELP)
     return values.help ? 0 : 1
   }
-  const { code, warnings, model } = await pptxToVue(await readFile(file), {
+  const { code, issues, model } = await pptxToVue(await readFile(file), {
     embedImages: !values['no-images'],
     masterShapes: !values['no-master'],
     ...(values.from ? { importFrom: values.from } : {}),
   })
-  for (const warning of warnings) process.stderr.write(`warning: ${warning}\n`)
+  for (const issue of issues) {
+    const where = issue.slide === undefined ? '' : `slide ${issue.slide}: `
+    process.stderr.write(`warning: ${where}${issue.message}\n`)
+  }
   if (values.out) {
     await writeFile(values.out, code)
     process.stderr.write(`${basename(file)}: ${model.slides.length} slides written to ${values.out}\n`)

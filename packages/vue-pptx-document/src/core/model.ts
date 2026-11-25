@@ -96,6 +96,10 @@ export interface DeckMeta {
   company?: string
   subject?: string
   revision?: string
+  keywords?: string
+  category?: string
+  description?: string
+  lastModifiedBy?: string
 }
 
 export interface DeckModel {

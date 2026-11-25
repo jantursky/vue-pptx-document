@@ -1,5 +1,6 @@
 import JSZip from 'jszip'
 
+import type { WarningCode, PptxWarning } from '../core/diagnostics'
 import type {
   Background,
   ChartName,
@@ -27,8 +28,10 @@ export interface ParseOptions {
 
 export interface ParseResult {
   model: DeckModel
-  /** Things the importer skipped or approximated. */
+  /** Things the importer skipped or approximated: the distinct messages, in order. */
   warnings: string[]
+  /** The same things, each with the slide it is on: one per distinct code, message and slide. */
+  issues: PptxWarning[]
 }
 
 export type PptxInput = ArrayBuffer | Uint8Array | Blob
@@ -139,7 +142,11 @@ interface ColorResult {
 }
 
 class Importer {
-  readonly warnings: string[] = []
+  readonly issues: PptxWarning[] = []
+  /** The 1-based position of each slide part, in `sldIdLst` order. */
+  readonly slideNumbers = new Map<string, number>()
+  /** The 1-based slide being read; unset for the theme, the masters and the presentation itself. */
+  slide: number | undefined
   private readonly rels = new Map<string, Map<string, Relationship>>()
   private readonly parts = new Map<string, XmlNode | undefined>()
   private readonly images = new Map<string, string>()
@@ -150,8 +157,15 @@ class Importer {
     private readonly options: Required<ParseOptions>,
   ) {}
 
-  warn(message: string): void {
-    if (!this.warnings.includes(message)) this.warnings.push(message)
+  /** The distinct messages, in the order they were first reported. */
+  get warnings(): string[] {
+    return [...new Set(this.issues.map((issue) => issue.message))]
+  }
+
+  warn(code: WarningCode, message: string): void {
+    const slide = this.slide
+    if (this.issues.some((issue) => issue.code === code && issue.message === message && issue.slide === slide)) return
+    this.issues.push(slide === undefined ? { code, message } : { code, message, slide })
   }
 
   async xml(part: string): Promise<XmlNode | undefined> {
@@ -196,7 +210,10 @@ class Importer {
       src = `data:${MIME[extension] ?? 'application/octet-stream'};base64,${base64}`
     } else src = part.replace(/^ppt\//, '')
     if (extension === 'emf' || extension === 'wmf')
-      this.warn(`${part} is a ${extension.toUpperCase()} picture; browsers can't show it in the preview.`)
+      this.warn(
+        'import-picture',
+        `${part} is a ${extension.toUpperCase()} picture; browsers can't show it in the preview.`,
+      )
     this.images.set(part, src)
     return src
   }
@@ -269,10 +286,11 @@ class Importer {
     if (solid) return this.color(solid)
     const gradient = child(node, 'a:gradFill')
     if (gradient) {
-      this.warn('Gradient fills are imported as their first color.')
+      this.warn('import-fill', 'Gradient fills are imported as their first color.')
       return this.color(descendants(gradient, 'a:gs')[0])
     }
-    if (child(node, 'a:blipFill') || child(node, 'a:pattFill')) this.warn('Picture and pattern fills are not imported.')
+    if (child(node, 'a:blipFill') || child(node, 'a:pattFill'))
+      this.warn('import-fill', 'Picture and pattern fills are not imported.')
     return undefined
   }
 
@@ -358,6 +376,11 @@ const runProps = (importer: Importer, rPr: XmlNode | undefined, relationships: M
   const link = attr(child(rPr, 'a:hlinkClick'), 'r:id')
   const target = link ? relationships.get(link) : undefined
   if (target?.external) options.hyperlink = { url: target.target }
+  // A link that jumps to another slide targets that slide's part, which has a position in the deck.
+  else if (target?.type.endsWith('/slide')) {
+    const slide = importer.slideNumbers.get(target.target)
+    if (slide) options.hyperlink = { slide }
+  }
   return options
 }
 
@@ -496,7 +519,7 @@ const shapeObject = async (
   frame = transform(frame)
   const geometry = geometryOptions(xfrm)
   const preset = attr(child(spPr, 'a:prstGeom'), 'prst')
-  if (!preset && child(spPr, 'a:custGeom')) importer.warn('Freeform shapes are imported as rectangles.')
+  if (!preset && child(spPr, 'a:custGeom')) importer.warn('import-shape', 'Freeform shapes are imported as rectangles.')
   const shape = preset ?? 'rect'
   const options: Options = { ...geometry }
   const fill = importer.fill(spPr)
@@ -553,7 +576,7 @@ const pictureObject = async (
     descendants(path(pic, 'p:nvPicPr'), 'a:videoFile').length > 0 ||
     descendants(path(pic, 'p:nvPicPr'), 'p14:media').length > 0
   ) {
-    importer.warn('Video and audio are imported as their poster picture.')
+    importer.warn('import-media', 'Video and audio are imported as their poster picture.')
   }
   return { kind: 'image', frame: transform(frame), src, options: options }
 }
@@ -730,7 +753,7 @@ const chartObject = async (importer: Importer, frame: Frame, chartPart: string):
     parts.push(part)
   }
   if (parts.length === 0) {
-    importer.warn('A chart of a type PptxGenJS cannot write was skipped.')
+    importer.warn('import-chart', 'A chart of a type PptxGenJS cannot write was skipped.')
     return undefined
   }
   const valAx = child(plotArea, 'c:valAx')
@@ -775,8 +798,8 @@ const graphicFrameObject = async (
     const target = id ? (await importer.relationships(part)).get(id) : undefined
     return target ? chartObject(importer, transform(frame), target.target) : undefined
   }
-  if (uri.includes('diagram')) importer.warn('SmartArt is not imported.')
-  else importer.warn(`An embedded object (${uri.split('/').pop() ?? 'unknown'}) is not imported.`)
+  if (uri.includes('diagram')) importer.warn('import-object', 'SmartArt is not imported.')
+  else importer.warn('import-object', `An embedded object (${uri.split('/').pop() ?? 'unknown'}) is not imported.`)
   return undefined
 }
 
@@ -901,12 +924,26 @@ export const parsePptx = async (input: PptxInput, options: ParseOptions = {}): P
   const author = textOf(child(core, 'dc:creator')).trim()
   const subject = textOf(child(core, 'dc:subject')).trim()
   const company = textOf(child(app, 'Company')).trim()
+  const keywords = textOf(child(core, 'cp:keywords')).trim()
+  const category = textOf(child(core, 'cp:category')).trim()
+  const description = textOf(child(core, 'dc:description')).trim()
+  const lastModifiedBy = textOf(child(core, 'cp:lastModifiedBy')).trim()
   if (title) meta.title = title
   if (author) meta.author = author
   if (subject) meta.subject = subject
   if (company) meta.company = company
+  if (keywords) meta.keywords = keywords
+  if (category) meta.category = category
+  if (description) meta.description = description
+  // PptxGenJS sets the last editor to the author, so only a different name says something.
+  if (lastModifiedBy && lastModifiedBy !== author) meta.lastModifiedBy = lastModifiedBy
 
   const relationships = await importer.relationships(presentationPart)
+  for (const id of all(child(presentation, 'p:sldIdLst'), 'p:sldId')) {
+    const target = relationships.get(attr(id, 'r:id') ?? '')
+    if (target && !importer.slideNumbers.has(target.target))
+      importer.slideNumbers.set(target.target, importer.slideNumbers.size + 1)
+  }
   const slides: SlideModel[] = []
   for (const id of all(child(presentation, 'p:sldIdLst'), 'p:sldId')) {
     const target = relationships.get(attr(id, 'r:id') ?? '')
@@ -914,6 +951,7 @@ export const parsePptx = async (input: PptxInput, options: ParseOptions = {}): P
     const part = target.target
     const root = await importer.xml(part)
     if (!root) continue
+    importer.slide = slides.length + 1
     const layoutPart = await importer.relatedOfType(part, 'slideLayout')
     const masterPart = layoutPart ? await importer.relatedOfType(layoutPart, 'slideMaster') : undefined
     const inheritFrom = [layoutPart, masterPart].filter((item): item is string => item !== undefined)
@@ -943,5 +981,6 @@ export const parsePptx = async (input: PptxInput, options: ParseOptions = {}): P
     if (notes) slide.notes = notes
     slides.push(slide)
   }
-  return { model: { layout, meta, masters: [], slides }, warnings: importer.warnings }
+  importer.slide = undefined
+  return { model: { layout, meta, masters: [], slides }, warnings: importer.warnings, issues: importer.issues }
 }

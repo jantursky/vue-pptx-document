@@ -4,7 +4,7 @@ import { normalizeColors } from './colors'
 import { at, createContext, inContext, warn, type Context, type DiagnosticOptions } from './diagnostics'
 import { layoutFlex, loadYoga, type Yoga } from './flex'
 import { measureText } from './measure'
-import type { DeckLayout, DeckModel, Frame, MasterModel, SlideModel, SlideObject } from './model'
+import type { DeckLayout, DeckModel, Frame, MasterModel, SlideModel, SlideObject, SlideObjectKind } from './model'
 import { tag, TYPES } from './nodes'
 import { backgroundOf, DRAWABLE, runsOf, tableRows, textOptions, toObject } from './objects'
 import type { TreeNode } from './snapshot'
@@ -142,6 +142,86 @@ const needYoga = (Y: Yoga | undefined): Yoga => {
   return Y
 }
 
+const KIND_TAGS: Record<SlideObjectKind, string> = {
+  text: '<Text>',
+  shape: '<Shape>',
+  image: '<Image>',
+  table: '<Table>',
+  chart: '<Chart>',
+  media: '<Media>',
+  placeholder: '<Placeholder>',
+}
+
+/**
+ * Warns about each object whose frame lies outside the slide. It is still written: parking an object
+ * off the slide can be deliberate. Zero-size frames on an edge (a line at `y: 0`) are not outside.
+ */
+const checkBounds = (objects: SlideObject[], layout: DeckLayout): void => {
+  for (const object of objects) {
+    const { x, y, w, h } = object.frame
+    if (x >= layout.width || y >= layout.height || x + w < 0 || y + h < 0) {
+      at({ object: KIND_TAGS[object.kind] }, () =>
+        warn('off-slide', `${KIND_TAGS[object.kind]} lies outside the slide; it is still written.`),
+      )
+    }
+  }
+}
+
+/** The options that can carry a `hyperlink`: the object's own, each run's and each table cell's. */
+const linkHolders = (object: SlideObject): { hyperlink?: unknown }[] => {
+  const holders: ({ hyperlink?: unknown } | undefined)[] = [object.options as { hyperlink?: unknown }]
+  if ('runs' in object) holders.push(...object.runs.map((run) => run.options))
+  if (object.kind === 'table') {
+    for (const row of object.rows) {
+      for (const cell of row) {
+        holders.push(cell.options)
+        if (Array.isArray(cell.text)) holders.push(...cell.text.map((run) => run.options))
+      }
+    }
+  }
+  return holders.filter((holder): holder is { hyperlink?: unknown } => holder !== undefined)
+}
+
+/**
+ * Turns each `{ slide }` link into a slide number, once every slide exists. A number is kept when it
+ * is a slide; a name is looked up as a `title`, then as a `section`, and the first match wins. A link
+ * with no target is dropped with an `unresolved-link` warning, and its object is still written.
+ */
+const resolveLinks = (slides: SlideModel[], masters: MasterModel[]): void => {
+  const numberOf = (target: unknown): number | undefined => {
+    if (typeof target === 'number')
+      return Number.isInteger(target) && target >= 1 && target <= slides.length ? target : undefined
+    if (typeof target !== 'string') return undefined
+    const byTitle = slides.findIndex((slide) => slide.title === target)
+    if (byTitle >= 0) return byTitle + 1
+    const bySection = slides.findIndex((slide) => slide.section === target)
+    return bySection >= 0 ? bySection + 1 : undefined
+  }
+  const fix = (holder: { hyperlink?: unknown }): void => {
+    const link = holder.hyperlink as { slide?: unknown } | undefined
+    if (link?.slide === undefined) return
+    const slide = numberOf(link.slide)
+    if (slide !== undefined) {
+      holder.hyperlink = { ...link, slide }
+      return
+    }
+    const message =
+      typeof link.slide === 'number'
+        ? `A link to slide ${link.slide} matches no slide; the deck has ${slides.length}. The link is dropped.`
+        : typeof link.slide === 'string'
+          ? `A link to "${link.slide}" matches no slide's title or section; the link is dropped.`
+          : 'A link has no usable slide; it is dropped.'
+    warn('unresolved-link', message)
+    delete holder.hyperlink
+  }
+  slides.forEach((slide, index) => {
+    at({ slide: index + 1 }, () => slide.objects.flatMap(linkHolders).forEach(fix))
+  })
+  masters.forEach((master) => {
+    at({ object: '<Master>' }, () => master.objects.flatMap(linkHolders).forEach(fix))
+  })
+}
+
 /** Whether any part of the tree is laid out with flexbox, so Yoga has to load first. */
 const usesFlex = (node: TreeNode): boolean =>
   node.type === TYPES.view ||
@@ -210,6 +290,10 @@ const resolveDeck = (Y: Yoga | undefined, tree: TreeNode): DeckModel => {
       )
     }
   })
+  resolveLinks(slides, masters)
+  slides.forEach((slide, index) => {
+    at({ slide: index + 1 }, () => checkBounds(slide.objects, layout))
+  })
   const theme = defined({
     headFontFace:
       (props.headFontFace as string | undefined) ?? (props.theme as PptxGenJS.ThemeProps | undefined)?.headFontFace,
@@ -223,6 +307,10 @@ const resolveDeck = (Y: Yoga | undefined, tree: TreeNode): DeckModel => {
       author: props.author as string | undefined,
       company: props.company as string | undefined,
       subject: props.subject as string | undefined,
+      keywords: props.keywords as string | undefined,
+      category: props.category as string | undefined,
+      description: props.description as string | undefined,
+      lastModifiedBy: props.lastModifiedBy as string | undefined,
       revision: props.revision === undefined ? undefined : String(props.revision as string | number),
     }),
     rtl: props.rtl === true ? true : undefined,

@@ -4,14 +4,24 @@ All notable changes to `vue-pptx-document` are listed here. The format follows [
 
 ## [Unreleased]
 
+## [1.5.0] - 2026-11-25
+
 ### Added
 
 - `loadImage` in the write options loads every picture, background and media cover that isn't a data URI yet, once per distinct source, and resolves to a base64 data URI. It works in Node and in the browser.
 - `allowFiles` in the write options. On by default; `allowFiles: false` keeps Node from reading images and media files from the file system.
 - The warning code `load-failed`, for an image that can't be loaded and for a file that isn't allowed.
+- `href` on `<Shape>`, `<Image>`, `<TableRow>` and `<TableCell>`, the shorthand `<Run>` already has. It also takes `{ slide, tooltip? }` to jump to another slide, by its 1-based number or by the `title` or `section` of the slide; a name resolves to the first slide that has it. A link that matches no slide is dropped with an `unresolved-link` warning, and its object is still written.
+- The warning codes `invalid-image` (a data URI with no image data), `empty-chart` (a chart without values, which is skipped) and `off-slide` (an object outside the slide, which is still written).
+- `keywords`, `category`, `description` and `lastModifiedBy` on `<Presentation>`, written to the file's document properties. Without `lastModifiedBy`, the author stays the last editor.
+- `parsePptx` and `pptxToVue` return `issues`: each warning as `{ code, message, slide? }`, one for each distinct code, message and slide. `warnings` is unchanged, a list of the distinct messages. The importer's codes are `import-fill`, `import-shape`, `import-media`, `import-chart`, `import-object` and `import-picture`.
+- The importer reads a jump to another slide as `href` with `{ slide }`, and writes it that way in the generated component, so a deck with slide links round-trips. It reads `keywords`, `category`, `description` and the last editor back too.
+- The CLI prints the slide number in front of a warning that has one: `warning: slide 2: …`.
 
 ### Changed
 
+- The `WarningCode` union grows. It is open: a `switch` over it needs a `default` branch.
+- The main entry grows to 29.6 kB gzipped with the slide links, the warning checks and the document properties (budget raised from 29 to 30 kB; the preview components' budget from 28 to 29 kB).
 - In Node, images are loaded before PptxGenJS writes the file. An image that fails is left out with a `load-failed` warning instead of rejecting the render; `strict: true` still rejects. A JPEG or GIF background given as a data URI is stored with its own file extension instead of `.png`.
 - The main entry grows to 28.7 kB gzipped with the image loading (budget raised from 28 to 29 kB; the preview components' budget from 27 to 28 kB).
 
@@ -121,7 +131,8 @@ All notable changes to `vue-pptx-document` are listed here. The format follows [
 - `vue-pptx-document/import`: `pptxToVue()`, `parsePptx()` and `modelToVue()` read a .pptx (runs, bullets, shapes, groups, pictures, tables, charts, theme colors, backgrounds, layouts and masters, sections, notes, slide numbers) and write a Vue component that renders it.
 - A `vue-pptx-document import deck.pptx -o Deck.vue` command line.
 
-[Unreleased]: https://github.com/jantursky/vue-pptx-document/compare/1.4.0...HEAD
+[Unreleased]: https://github.com/jantursky/vue-pptx-document/compare/1.5.0...HEAD
+[1.5.0]: https://github.com/jantursky/vue-pptx-document/compare/1.4.0...1.5.0
 [1.4.0]: https://github.com/jantursky/vue-pptx-document/compare/1.3.0...1.4.0
 [1.3.0]: https://github.com/jantursky/vue-pptx-document/compare/1.2.0...1.3.0
 [1.2.0]: https://github.com/jantursky/vue-pptx-document/compare/1.1.3...1.2.0

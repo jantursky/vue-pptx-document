@@ -1,7 +1,18 @@
 import { describe, expect, it, vi } from 'vitest'
 import { defineComponent, h } from 'vue'
 
-import { Media, Presentation, Slide, Text, renderToBuffer, renderToModel, type PptxWarning } from '../../src'
+import {
+  Chart,
+  Image,
+  Media,
+  Presentation,
+  Shape,
+  Slide,
+  Text,
+  renderToBuffer,
+  renderToModel,
+  type PptxWarning,
+} from '../../src'
 import { at, createContext, inContext, locate, warn } from '../../src/core/diagnostics'
 
 // Text straight inside a <Slide> is dropped: the simplest deck that warns.
@@ -97,5 +108,43 @@ describe('diagnostics in renders', () => {
     expect(error).toBeInstanceOf(Error)
     expect((error as Error).message).toMatch(/slide 3, <Media>/)
     vi.restoreAllMocks()
+  })
+})
+
+describe('extended warning codes', () => {
+  // One slide with the given object, rendered with every warning collected.
+  const withWarnings = async (child: () => unknown) => {
+    const warnings: PptxWarning[] = []
+    const model = await renderToModel(
+      defineComponent(() => () => h(Presentation, null, () => h(Slide, null, child as never))),
+      {},
+      { onWarn: (warning) => warnings.push(warning) },
+    )
+    return { model, warnings }
+  }
+
+  it('warns empty-chart on a chart without values, and skips it', async () => {
+    const { model, warnings } = await withWarnings(() => h(Chart, { type: 'bar', x: 0, y: 0, w: 4, h: 3, data: [] }))
+    expect(warnings).toEqual([expect.objectContaining({ code: 'empty-chart', slide: 1, object: '<Chart>' })])
+    expect(model.slides[0]!.objects).toHaveLength(0)
+  })
+
+  it('warns off-slide and still writes the shape', async () => {
+    const { model, warnings } = await withWarnings(() => h(Shape, { type: 'rect', x: 11, y: 1, w: 1, h: 1 }))
+    expect(warnings).toEqual([expect.objectContaining({ code: 'off-slide', slide: 1, object: '<Shape>' })])
+    expect(model.slides[0]!.objects.map((object) => object.kind)).toEqual(['shape'])
+  })
+
+  it('does not call a zero-height line on the top edge off the slide', async () => {
+    const { warnings } = await withWarnings(() => h(Shape, { type: 'line', x: 1, y: 0, w: 3, h: 0 }))
+    expect(warnings).toEqual([])
+  })
+
+  it('warns invalid-image for a data URI that is not image data, and skips the image', async () => {
+    const { model, warnings } = await withWarnings(() =>
+      h(Image, { src: 'data:text/plain;base64,AAAA', x: 0, y: 0, w: 1, h: 1 }),
+    )
+    expect(warnings).toEqual([expect.objectContaining({ code: 'invalid-image', slide: 1, object: '<Image>' })])
+    expect(model.slides[0]!.objects).toHaveLength(0)
   })
 })

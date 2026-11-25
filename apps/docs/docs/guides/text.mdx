@@ -96,16 +96,14 @@ Any other prop goes to PptxGenJS's `addText` options as written.
 
 ## Links
 
-`href` is a shorthand for `hyperlink: { url }`. For a tooltip or a link to another slide, pass `hyperlink` itself:
+`href` is a shorthand for `hyperlink: { url }`, and it also takes `{ slide, tooltip? }` to jump to another slide of the deck. Links on shapes, pictures, table rows and cells, and the rules for slide names, are in [Links](/guides/links).
 
 ```vue
 <Text :x="0.5" :y="4.6" :w="9" :h="0.4" :font-size="12">
   Read the notes on <Run href="https://github.com/jantursky/vue-pptx-document">GitHub</Run>,
-  or jump to the <Run :hyperlink="{ slide: 3, tooltip: 'Status by team' }">status table</Run>.
+  or jump to the <Run :href="{ slide: 3, tooltip: 'Status by team' }">status table</Run>.
 </Text>
 ```
-
-`<Shape>` and `<Image>` take `hyperlink` too, which makes the whole object a link.
 
 ## Colors
 

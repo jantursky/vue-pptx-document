@@ -19,6 +19,8 @@ const sources = [
   { file: 'apps/docs/docs/getting-started.mdx', dir: 'getting-started', pattern: /```vue (\S+\.vue)\n([\s\S]*?)```/g },
   // The testing guide's Vitest files.
   { file: 'apps/docs/docs/guides/testing.mdx', dir: 'testing', pattern: /```ts (\S+\.test\.ts)\n([\s\S]*?)```/g },
+  // The links guide's deck, which uses hyperlinks and slide links on every kind of object.
+  { file: 'apps/docs/docs/guides/links.mdx', dir: 'links', pattern: /```vue (\S+\.vue)\n([\s\S]*?)```/g },
 ]
 
 const stale = []

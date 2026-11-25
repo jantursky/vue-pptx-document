@@ -19,6 +19,8 @@ The root of every deck.
 | --------------------------------------- | -------------------------------------------------------------------------------------------------- |
 | `layout`                                | `16x9` (default, 10 × 5.625 in), `16x10`, `4x3`, `wide` (13.333 × 7.5 in), or `{ width, height }`. |
 | `title`, `author`, `company`, `subject` | File metadata.                                                                                     |
+| `keywords`, `category`, `description`   | More file metadata: `cp:keywords`, `cp:category` and `dc:description`.                             |
+| `last-modified-by`                      | The last editor. Without it, the author stays the last editor.                                     |
 | `revision`                              | A string or number.                                                                                |
 | `rtl`                                   | Right-to-left presentation.                                                                        |
 | `lang`                                  | Default language of every run without its own `lang`, such as `en-US`.                             |
@@ -117,6 +119,7 @@ A line break. No props.
 | `rect-radius`                | Corner radius of `roundRect`.                                                                           |
 | `rotate`, `flip-h`, `flip-v` | Transform.                                                                                              |
 | `shadow`, `hyperlink`        | As in PptxGenJS.                                                                                        |
+| `href`                       | A URL, or `{ slide, tooltip? }` for another slide. See [Links](/guides/links).                          |
 
 A `Shape` with text content is written as a text box drawn as that shape, and takes the `Text` props.
 
@@ -131,6 +134,7 @@ A `Shape` with text content is written as a text box drawn as that shape, and ta
 | `sizing`                                                  | `{ type, w, h }`, with `type` `contain`, `cover` or `crop`. |
 | `rounding`                                                | Crop to an ellipse.                                         |
 | `rotate`, `flip-h`, `flip-v`, `transparency`, `hyperlink` | As in PptxGenJS.                                            |
+| `href`                                                    | A URL, or `{ slide, tooltip? }` for another slide.          |
 
 A `src` that isn't a data URI is loaded when the file is written. If decks are built from input you don't trust, read [Images and untrusted input](/guides/server#images-and-untrusted-input) first.
 
@@ -151,7 +155,7 @@ Children: `TableRow`. See [Tables](/guides/tables).
 
 ## TableRow
 
-Takes cell props, which apply to each of its cells. Children: `TableCell`.
+Takes cell props, which apply to each of its cells. An `href` links every cell that doesn't set its own, see [Links](/guides/links). Children: `TableCell`.
 
 ## TableCell
 

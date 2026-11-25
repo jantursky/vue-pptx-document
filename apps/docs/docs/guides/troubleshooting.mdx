@@ -17,16 +17,22 @@ await renderToBuffer(ReportDeck, props, { strict: true })
 
 Each warning is `{ code, message, slide?, object? }`. Match on `code`, since the wording may change:
 
-| code                    | cause                                                          |
-| ----------------------- | -------------------------------------------------------------- |
-| `dropped-text`          | Text outside a text component.                                 |
-| `misplaced-object`      | A component where it can't be placed.                          |
-| `unknown-master`        | A slide names a master that doesn't exist.                     |
-| `master-object-dropped` | An object a PptxGenJS master can't hold.                       |
-| `missing-src`           | An `<Image>` without `src`.                                    |
-| `load-failed`           | An image that failed to load, or a file that isn't allowed.    |
-| `unknown-color`         | A color that is neither a CSS color nor a theme color.         |
-| `unknown-prop`          | A prop the component doesn't know, in development builds only. |
+| code                    | cause                                                                                      |
+| ----------------------- | ------------------------------------------------------------------------------------------ |
+| `dropped-text`          | Text outside a text component.                                                             |
+| `misplaced-object`      | A component where it can't be placed.                                                      |
+| `unknown-master`        | A slide names a master that doesn't exist.                                                 |
+| `master-object-dropped` | An object a PptxGenJS master can't hold.                                                   |
+| `missing-src`           | An `<Image>` without `src`.                                                                |
+| `load-failed`           | An image that failed to load, or a file that isn't allowed.                                |
+| `unknown-color`         | A color that is neither a CSS color nor a theme color.                                     |
+| `unknown-prop`          | A prop the component doesn't know, in development builds only.                             |
+| `invalid-image`         | An `<Image>` whose data URI holds no image. It is skipped.                                 |
+| `empty-chart`           | A `<Chart>` with no series that has values. It is skipped.                                 |
+| `off-slide`             | An object whose frame lies outside the slide. It is still written.                         |
+| `unresolved-link`       | A slide link to a number or name no slide has. The link is dropped, the object is written. |
+
+The importer reports its own codes, `import-fill`, `import-shape`, `import-media`, `import-chart`, `import-object` and `import-picture`, through `issues` on `parsePptx` and `pptxToVue`, each with its slide. See [Importing a .pptx](/guides/import#what-doesnt).
 
 `usePptx`, `useSlides` and `<Preview @warn>` take the same options; the composables also return the latest render's `warnings`. Errors name the slide and object the same way, such as `ENOENT: no such file … (slide 3, <Media>)`.
 

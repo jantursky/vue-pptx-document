@@ -244,3 +244,35 @@ describe('accessible output', () => {
     spy.mockRestore()
   })
 })
+
+describe('document properties', () => {
+  const Props = (props: Record<string, unknown>) =>
+    defineComponent(
+      () => () => h(Presentation, props, () => h(Slide, null, () => h(Text, { x: 0, y: 0, w: 2, h: 1 }, () => 'Hi'))),
+    )
+
+  it('writes keywords and category to the core properties', async () => {
+    const core = (await unzip(await renderToBuffer(Props({ keywords: 'quarterly, report', category: 'Finance' }))))[
+      'docProps/core.xml'
+    ]!
+    expect(core).toContain('<cp:keywords>quarterly, report</cp:keywords>')
+    expect(core).toContain('<cp:category>Finance</cp:category>')
+  })
+
+  it('writes the description and the last editor, with one lastModifiedBy element', async () => {
+    const core = (
+      await unzip(
+        await renderToBuffer(Props({ author: 'Ada', description: 'Q3 & Q4 <draft>', lastModifiedBy: 'Grace' })),
+      )
+    )['docProps/core.xml']!
+    expect(core).toContain('<dc:description>Q3 &amp; Q4 &lt;draft&gt;</dc:description>')
+    expect(core.match(/<cp:lastModifiedBy\b/g)).toHaveLength(1)
+    expect(core).toContain('<cp:lastModifiedBy>Grace</cp:lastModifiedBy>')
+  })
+
+  it('keeps the author as the last editor without lastModifiedBy', async () => {
+    const core = (await unzip(await renderToBuffer(Props({ author: 'Ada' }))))['docProps/core.xml']!
+    expect(core).not.toContain('Grace')
+    expect(core.match(/<cp:lastModifiedBy\b/g)?.length ?? 0).toBeLessThanOrEqual(1)
+  })
+})
